@@ -286,3 +286,14 @@
 - Updated `content/one-thing/marketing.ts` so its typed pricing-card metadata matches the new category-tier billing model.
 - Updated `.env.example` so the Stripe price variable names now match the requested category-tier naming.
 - Did not create live recurring Stripe products or write real `price_xxx` ids into the repo, because the worker only had access to NanoCorp's one-time product tooling and not to authenticated raw Stripe recurring-price creation.
+
+## Verification Notes - 2026-04-21 Stripe Category Tier Task
+
+- `git diff --check` passed.
+- `npm ci` completed successfully in the checkout.
+- `npm run build` passed after the billing-tier config and content updates.
+- The code-side prep work was committed and pushed to `main` in commit `ee41894` (`Align ONE THING billing tier config`).
+- After the required 90-second wait, one deployment verification attempt was made with `agent-browser open https://onestep.nanocorp.app`.
+- The deployment verification attempt could not complete because the local environment does not have a Chrome binary available for `agent-browser`:
+  - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
+- No second deployment verification attempt was made.
