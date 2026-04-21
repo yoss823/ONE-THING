@@ -47,18 +47,20 @@ MVP constraint:
 
 ## Initial Category Set
 
-Launch with 5 categories only:
+Launch with 6 categories only:
 
-1. Fitness
-2. Nutrition
-3. Focus
-4. Relationships
-5. Home
+1. Mental clarity
+2. Organization
+3. Health / Energy
+4. Work / Business
+5. Personal projects
+6. Relationships
 
 Rationale:
 
 - broad enough to appeal to mainstream consumers
 - concrete enough to generate short daily actions
+- practical without relying on motivational copy or therapy framing
 - avoids regulated or high-risk advice categories
 
 Categories explicitly excluded from MVP:

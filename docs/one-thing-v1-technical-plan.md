@@ -11,6 +11,19 @@ The V1 should optimize for:
 - fast iteration
 - low vendor lock-in
 
+## Launch Category Set
+
+Use the following six launch categories as the initial catalog:
+
+1. Mental clarity (`mental_clarity`)
+2. Organization (`organization`)
+3. Health / Energy (`health_energy`)
+4. Work / Business (`work_business`)
+5. Personal projects (`personal_projects`)
+6. Relationships (`relationships`)
+
+The initial checked-in source of truth for launch content and selection rules lives in `data/action-library/` and is described in `docs/launch-action-library-spec.md`.
+
 ## Recommended Stack
 
 ### App and Hosting
@@ -149,7 +162,8 @@ This is simpler and safer than trying to run timezone-specific cron jobs.
 - `instruction`
 - `minutes`
 - `why_it_matters`
-- `difficulty`
+- `complexity` (`lighter`, `standard`, `stretch`)
+- `texture`
 - `status` (`draft`, `active`, `archived`)
 - `is_fallback`
 - `created_at`
@@ -244,6 +258,7 @@ Principles:
 - Never make the email vendor the source of truth for send history.
 - Never make Stripe the source of truth for product state.
 - Keep category content in Postgres or checked-in seed files, not in a proprietary CMS.
+- Keep the launch seed library and selector rules exportable in checked-in files under `data/action-library/`.
 - If a vendor is replaced, only the adapter layer should change.
 
 ## Operational Guardrails
@@ -271,7 +286,7 @@ Implement onboarding for category selection and timezone capture, then calculate
 
 ### Step 4
 
-Implement content seeding, send queue selection, email rendering, and provider webhooks.
+Implement content seeding from `data/action-library/`, send queue selection, email rendering, and provider webhooks.
 
 ### Step 5
 
@@ -283,5 +298,6 @@ Implement settings page, Billing Portal link, admin exports, and basic operation
 2. Create the initial SQL migration for the tables above.
 3. Wire Stripe Checkout, Billing Portal, and subscription webhooks.
 4. Build onboarding for categories and timezone.
-5. Implement the cron-driven send loop and Postmark integration.
-6. Add admin CSV export and nightly database backup automation.
+5. Implement content seeding and selection logic using the checked-in action library and adaptation rules.
+6. Implement the cron-driven send loop and Postmark integration.
+7. Add admin CSV export and nightly database backup automation.

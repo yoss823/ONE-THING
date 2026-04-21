@@ -34,7 +34,14 @@ create table if not exists user_categories (
   primary key (user_id, category_slug),
   unique (user_id, position),
   check (
-    category_slug in ('fitness', 'nutrition', 'focus', 'relationships', 'home')
+    category_slug in (
+      'mental_clarity',
+      'organization',
+      'health_energy',
+      'work_business',
+      'personal_projects',
+      'relationships'
+    )
   )
 );
 
@@ -45,14 +52,23 @@ create table if not exists actions (
   instruction text not null,
   minutes smallint not null,
   why_it_matters text not null,
-  difficulty text,
+  complexity text not null default 'standard',
+  texture text not null,
   status text not null default 'draft',
   is_fallback boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (
-    category_slug in ('fitness', 'nutrition', 'focus', 'relationships', 'home')
+    category_slug in (
+      'mental_clarity',
+      'organization',
+      'health_energy',
+      'work_business',
+      'personal_projects',
+      'relationships'
+    )
   ),
+  check (complexity in ('lighter', 'standard', 'stretch')),
   check (status in ('draft', 'active', 'archived'))
 );
 
@@ -84,7 +100,14 @@ create table if not exists daily_send_items (
   unique (daily_send_id, category_slug),
   unique (daily_send_id, position),
   check (
-    category_slug in ('fitness', 'nutrition', 'focus', 'relationships', 'home')
+    category_slug in (
+      'mental_clarity',
+      'organization',
+      'health_energy',
+      'work_business',
+      'personal_projects',
+      'relationships'
+    )
   )
 );
 
