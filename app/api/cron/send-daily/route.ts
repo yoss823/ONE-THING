@@ -1,6 +1,7 @@
 export {
   GET,
   POST,
-  runtime,
-  dynamic,
 } from "@/app/api/cron/daily-email/route";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
