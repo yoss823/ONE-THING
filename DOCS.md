@@ -59,6 +59,89 @@
   - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
 - No second deployment verification attempt was made.
 
+## Repository Findings - 2026-04-21 Monthly Clarity Email Task
+
+- `DOCS.md` was present and remains the required first read before re-exploring the repo.
+- The checked-in cron routes are still placeholders:
+  - `app/api/cron/send-daily/route.ts`
+  - `app/api/cron/process-send-queue/route.ts`
+- The repo does not currently contain the task-named paths:
+  - `app/api/cron/daily-email/route.ts`
+  - `app/api/cron/monthly-email/route.ts`
+  - `emails/MonthlyClarityEmail.tsx`
+  - `vercel.json`
+- The current Prisma schema and live database are aligned and still minimal:
+  - `users` only has `id`, `email`, and `created_at`
+  - there is no persisted timezone field yet
+  - there is no `DailyDeliveryLog`-style table yet
+  - there is no `send_queue` table in the live database
+- The older SQL blueprint under `db/migrations/0001_one_thing_v1.sql` already models the broader intended delivery system and confirms that:
+  - users are expected to have a `timezone`
+  - `monthly_clarity` is a first-class email kind
+  - monthly clarity replaces that day’s daily send
+- The existing live tables are currently empty, so adding the missing timezone and delivery-log schema in this branch has no data-migration risk.
+- `emails/DailyActionEmail.tsx` and `lib/email/sendDailyAction.ts` are the current style and Resend integration references for the new monthly email surface.
+
+## Changes Made - 2026-04-21 Monthly Clarity Email Task
+
+- Added the new monthly email template at `emails/MonthlyClarityEmail.tsx`.
+- The new monthly template matches the existing minimal email style and includes:
+  - first-month vs later-month header copy
+  - monthly completed / skipped recap
+  - strongest-area insight
+  - plain-text reflection prompt
+  - conditional upgrade link for one-category users
+  - unsubscribe footer
+- Added `lib/email/sendMonthlyClarity.tsx` as the Resend sender for the monthly email.
+- Added `lib/email/category-labels.ts` so category labels are rendered consistently across daily and monthly email flows.
+- Added `lib/email/daily-selection.ts` so the cron route can pick one active action per subscribed category using the existing action-selection heuristics plus recent delivery history.
+- Extended the Prisma schema to support the requested monthly-replacement behavior:
+  - `User.timezone`
+  - `DailyDeliveryType`
+  - `DailyDeliveryStatus`
+  - `DailyDeliveryLog` mapped to `daily_delivery_logs`
+- Added `prisma/migrations/20260421222500_add_user_timezone_for_daily_email/migration.sql` to restore the previously applied timezone migration that existed in the live database but was missing from the repo.
+- Added `prisma/migrations/20260421223500_monthly_clarity_email/migration.sql` to create the new delivery-log table and enums.
+- Added `app/api/cron/monthly-email/route.ts` as the new 1st-of-month cron endpoint.
+- Added `app/api/cron/daily-email/route.ts` as the canonical daily cron endpoint and updated `app/api/cron/send-daily/route.ts` to use the same handler so old callers stay aligned.
+- Added `lib/cron/email-cron.ts` with the shared cron logic for:
+  - `Authorization: Bearer $CRON_SECRET` verification
+  - local-time 8:00 AM ±10 minute matching per user timezone
+  - active-user filtering
+  - daily delivery logging
+  - monthly clarity recap generation
+  - daily skip when a same-day `monthly_clarity` log already exists
+- Updated `app/api/track/route.ts` so click responses now update the most recent matching `DailyDeliveryLog` row from `sent` to `completed` or `skipped`; this makes monthly recap counts come from delivery logs rather than only from the raw `user_events` stream.
+- Added `vercel.json` with the requested monthly cron schedule:
+  - `/api/cron/monthly-email`
+  - `*/10 * * * *`
+- Updated the existing Resend send helpers to lazily create the client so Next.js builds succeed even when `RESEND_API_KEY` is absent at build time.
+- Fixed the pre-existing `app/welcome/page.tsx` lint failure by replacing the synchronous state-setting effect with a lazy client-side initializer.
+- Updated the daily email sender module path from `lib/email/sendDailyAction.ts` to `lib/email/sendDailyAction.tsx` because the Resend `react:` payload now renders the email component directly.
+
+## Verification Notes - 2026-04-21 Monthly Clarity Email Task
+
+- `npm ci` completed successfully because the workspace did not have local binaries installed.
+- `DIRECT_URL="$DATABASE_URL" npm run db:generate` completed successfully.
+- `DIRECT_URL="$DATABASE_URL" npm run db:migrate` initially failed because `users.timezone` had already been applied by a database migration record that was missing from the repo.
+- Repaired that mismatch by:
+  - restoring the missing local migration directory `20260421222500_add_user_timezone_for_daily_email`
+  - marking the first failed `20260421223500_monthly_clarity_email` attempt as rolled back
+  - rerunning `npm run db:migrate` successfully
+- The live database now contains the new `daily_delivery_logs` table with:
+  - `id`
+  - `user_id`
+  - `action_id`
+  - `type`
+  - `status`
+  - `local_date`
+  - `sent_at`
+  - `responded_at`
+- `npm run lint` passed after the cron, email, and welcome-page fixes.
+- `npm run build` passed after:
+  - switching email sends from `react-dom/server` rendering to Resend’s `react:` payload
+  - lazily constructing the Resend client to avoid build-time env failures
+
 ## Repository Findings - 2026-04-21 Stripe Webhook Task
 
 - `DOCS.md` was present and remains the required first stop before re-exploring the repo.

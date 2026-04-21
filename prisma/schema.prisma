@@ -23,6 +23,18 @@ enum UserEventType {
   CLICKED_PAUSE @map("clicked_pause")
 }
 
+enum DailyDeliveryType {
+  DAILY           @map("daily")
+  WEEKLY          @map("weekly")
+  MONTHLY_CLARITY @map("monthly_clarity")
+}
+
+enum DailyDeliveryStatus {
+  SENT      @map("sent")
+  COMPLETED @map("completed")
+  SKIPPED   @map("skipped")
+}
+
 model User {
   id              String           @id @default(uuid()) @db.Uuid
   email           String           @unique @db.Text
@@ -31,6 +43,7 @@ model User {
   subscription    Subscription?
   preference      UserPreference?
   dailySends      DailySend[]
+  deliveryLogs    DailyDeliveryLog[]
   userEvents      UserEvent[]
   adaptationState AdaptationState?
 
@@ -69,6 +82,7 @@ model Action {
   estimatedMinutes Int            @map("estimated_minutes") @db.SmallInt
   active           Boolean        @default(true)
   dailySends       DailySend[]
+  deliveryLogs     DailyDeliveryLog[]
   userEvents       UserEvent[]
 
   @@index([category, active])
@@ -87,6 +101,24 @@ model DailySend {
   @@index([userId, sentAt])
   @@index([actionId, sentAt])
   @@map("daily_sends")
+}
+
+model DailyDeliveryLog {
+  id          String              @id @default(uuid()) @db.Uuid
+  userId      String              @map("user_id") @db.Uuid
+  actionId    String?             @map("action_id") @db.Text
+  type        DailyDeliveryType
+  status      DailyDeliveryStatus @default(SENT)
+  localDate   DateTime            @map("local_date") @db.Date
+  sentAt      DateTime            @default(now()) @map("sent_at") @db.Timestamptz(6)
+  respondedAt DateTime?           @map("responded_at") @db.Timestamptz(6)
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      Action?             @relation(fields: [actionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, localDate, type])
+  @@index([userId, status, sentAt])
+  @@index([actionId, sentAt])
+  @@map("daily_delivery_logs")
 }
 
 model UserEvent {

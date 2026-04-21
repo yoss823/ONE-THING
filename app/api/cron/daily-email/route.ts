@@ -1,3 +1,8 @@
+import {
+  DailyDeliveryStatus,
+  DailyDeliveryType,
+  UserEventType,
+} from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import {
@@ -65,6 +70,11 @@ function getLocalDateKey(date: Date, timezone: string): string {
   return `${year}-${month}-${day}`;
 }
 
+function getLocalDateValue(date: Date, timezone: string): Date {
+  const localDateKey = getLocalDateKey(date, timezone);
+  return new Date(`${localDateKey}T00:00:00.000Z`);
+}
+
 function formatEmailDate(date: Date, timezone: string): string {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
@@ -93,11 +103,30 @@ function hasSentLocalToday(user: DailyEmailUser, now: Date): boolean {
   return false;
 }
 
+async function hasMonthlyClarityLocalToday(
+  userId: string,
+  localDate: Date,
+): Promise<boolean> {
+  const monthlyLog = await prisma.dailyDeliveryLog.findFirst({
+    where: {
+      userId,
+      type: DailyDeliveryType.MONTHLY_CLARITY,
+      localDate,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return Boolean(monthlyLog);
+}
+
 async function logDelivery(
   userId: string,
   status: "sent" | "failed",
   sentAt: Date,
   selections: SelectedUserAction[],
+  localDate?: Date,
 ): Promise<void> {
   if (selections.length === 0) {
     await prisma.dailySend.create({
@@ -111,14 +140,43 @@ async function logDelivery(
     return;
   }
 
-  await prisma.dailySend.createMany({
-    data: selections.map((selection) => ({
-      userId,
-      actionId: selection.actionId,
-      status,
-      sentAt,
-    })),
-  });
+  const operations = [
+    prisma.dailySend.createMany({
+      data: selections.map((selection) => ({
+        userId,
+        actionId: selection.actionId,
+        status,
+        sentAt,
+      })),
+    }),
+  ];
+
+  if (status === "sent" && localDate) {
+    operations.push(
+      prisma.dailyDeliveryLog.createMany({
+        data: selections.map((selection) => ({
+          userId,
+          actionId: selection.actionId,
+          type: DailyDeliveryType.DAILY,
+          status: DailyDeliveryStatus.SENT,
+          localDate,
+          sentAt,
+        })),
+      }),
+    );
+    operations.push(
+      prisma.userEvent.createMany({
+        data: selections.map((selection) => ({
+          userId,
+          actionId: selection.actionId,
+          eventType: UserEventType.SENT,
+          createdAt: sentAt,
+        })),
+      }),
+    );
+  }
+
+  await prisma.$transaction(operations);
 }
 
 async function handleCron(request: Request) {
@@ -165,6 +223,7 @@ async function handleCron(request: Request) {
     include: dailyEmailUserInclude,
   });
   let sent = 0;
+  let skippedMonthly = 0;
 
   for (const user of users) {
     if (!user.timezone) {
@@ -175,6 +234,13 @@ async function handleCron(request: Request) {
 
     try {
       if (!isEightAM(user.timezone, now) || hasSentLocalToday(user, now)) {
+        continue;
+      }
+
+      const localDate = getLocalDateValue(now, user.timezone);
+
+      if (await hasMonthlyClarityLocalToday(user.id, localDate)) {
+        skippedMonthly += 1;
         continue;
       }
 
@@ -192,7 +258,7 @@ async function handleCron(request: Request) {
         })),
       });
 
-      await logDelivery(user.id, "sent", new Date(), selections);
+      await logDelivery(user.id, "sent", new Date(), selections, localDate);
       sent += 1;
     } catch (error) {
       console.error(`Failed to send daily email for user ${user.id}.`, error);
@@ -205,7 +271,7 @@ async function handleCron(request: Request) {
     }
   }
 
-  return NextResponse.json({ sent });
+  return NextResponse.json({ sent, skippedMonthly });
 }
 
 export async function GET(request: Request) {

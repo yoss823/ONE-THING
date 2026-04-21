@@ -1,4 +1,8 @@
-import { UserEventType } from "@prisma/client";
+import {
+  DailyDeliveryStatus,
+  DailyDeliveryType,
+  UserEventType,
+} from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
@@ -16,6 +20,12 @@ function redirectToTracked(
   return NextResponse.redirect(
     new URL(`/tracked?response=${response}`, request.url),
   );
+}
+
+function getDeliveryStatus(response: TrackingResponse): DailyDeliveryStatus {
+  return response === "done"
+    ? DailyDeliveryStatus.COMPLETED
+    : DailyDeliveryStatus.SKIPPED;
 }
 
 export async function GET(request: NextRequest) {
@@ -47,17 +57,48 @@ export async function GET(request: NextRequest) {
       return redirectTo(request, "/");
     }
 
-    await prisma.userEvent.create({
-      data: {
+    const now = new Date();
+    const matchingDeliveryLog = await prisma.dailyDeliveryLog.findFirst({
+      where: {
         userId,
         actionId,
-        eventType:
-          response === "done"
-            ? UserEventType.CLICKED_YES
-            : UserEventType.CLICKED_PAUSE,
-        createdAt: new Date(),
+        type: DailyDeliveryType.DAILY,
+      },
+      orderBy: {
+        sentAt: "desc",
+      },
+      select: {
+        id: true,
       },
     });
+
+    await prisma.$transaction([
+      prisma.userEvent.create({
+        data: {
+          userId,
+          actionId,
+          eventType:
+            response === "done"
+              ? UserEventType.CLICKED_YES
+              : UserEventType.CLICKED_PAUSE,
+          createdAt: now,
+        },
+      }),
+      ...(matchingDeliveryLog
+        ? [
+            prisma.dailyDeliveryLog.update({
+              where: {
+                id: matchingDeliveryLog.id,
+              },
+              data: {
+                status: getDeliveryStatus(response),
+                respondedAt: now,
+              },
+            }),
+          ]
+        : []),
+    ]);
+
     return redirectToTracked(request, response);
   } catch {
     return redirectTo(request, "/");
