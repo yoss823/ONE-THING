@@ -231,6 +231,10 @@
 - The repo does not currently include `@react-email/components` or any other React Email setup, so the simplest repo-consistent implementation is a plain React component rendered to static HTML.
 - `.env.example` already contains both `NEXT_PUBLIC_BASE_URL=http://localhost:3000` and a `RESEND_API_KEY` placeholder, so this task likely only needs normalization rather than new env keys.
 - Existing tracking helpers in `lib/email/tracking-links.ts` target the older `/t/:token/:action` shape and use `"pause"` rather than the task-specific query-string tracking URLs and `"skip"` response requested for this email.
+- The repo still does not contain concrete App Router surfaces for:
+  - `app/api/track/route.ts`
+  - `app/account/page.tsx`
+  - `app/unsubscribe/page.tsx`
 
 ## Changes Made - 2026-04-21 Daily Action Email Task
 
