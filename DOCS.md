@@ -42,6 +42,7 @@
 ## Verification Notes - 2026-04-21 Stripe Checkout Wiring Task
 
 - `npm install stripe` completed successfully.
+- `agent-browser install` completed successfully and downloaded a local Chrome binary for deployment verification.
 - `npm run lint` passed after the checkout wiring changes.
 - `npm run build` passed after the checkout wiring changes.
 - `nanocorp vercel env list` showed that the live Vercel project currently only has `DATABASE_URL` configured.
@@ -53,6 +54,12 @@
 - A follow-up `nanocorp vercel env list` confirmed those four variables are now present for `production` and `preview`.
 - The deployed checkout route will still require follow-up Vercel env configuration for `STRIPE_SECRET_KEY` before production checkout session creation can succeed.
 - `STRIPE_SECRET_KEY` is still missing from the live Vercel project, so production checkout session creation remains blocked until that secret is provided.
+- The checkout wiring changes were committed as `6e5c118` (`Wire Stripe checkout sessions into onboarding`) and pushed to `origin/main`.
+- After the required post-push wait, one deployment verification attempt was completed with `agent-browser open https://onestep.nanocorp.app`.
+- That deployment verification attempt successfully opened the live site and returned:
+  - title: `ONE THING`
+  - url: `https://onestep.nanocorp.app/`
+- No second deployment verification attempt was made.
 
 ## Changes Made - 2026-04-21 Onboarding Page Task
 
