@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserStatus {
+  PENDING_ONBOARDING @map("pending_onboarding")
+  ACTIVE             @map("active")
+  PAUSED             @map("paused")
+  CANCELED           @map("canceled")
+}
+
+enum PlanKey {
+  MONTHLY   @map("monthly")
+  QUARTERLY @map("quarterly")
+  ANNUAL    @map("annual")
+}
+
+enum SubscriptionStatus {
+  INCOMPLETE @map("incomplete")
+  TRIALING   @map("trialing")
+  ACTIVE     @map("active")
+  PAST_DUE   @map("past_due")
+  CANCELED   @map("canceled")
+  UNPAID     @map("unpaid")
+}
+
+enum CategorySlug {
+  MENTAL_CLARITY   @map("mental_clarity")
+  ORGANIZATION     @map("organization")
+  HEALTH_ENERGY    @map("health_energy")
+  WORK_BUSINESS    @map("work_business")
+  PERSONAL_PROJECTS @map("personal_projects")
+  RELATIONSHIPS    @map("relationships")
+}
+
+enum ActionComplexity {
+  LIGHTER  @map("lighter")
+  STANDARD @map("standard")
+  STRETCH  @map("stretch")
+}
+
+enum ComplexityBias {
+  DOWNSHIFT @map("downshift")
+  NEUTRAL   @map("neutral")
+  UPSHIFT   @map("upshift")
+}
+
+enum EmailKind {
+  DAILY           @map("daily")
+  WEEKLY          @map("weekly")
+  MONTHLY_CLARITY @map("monthly_clarity")
+}
+
+enum SendQueueStatus {
+  QUEUED   @map("queued")
+  CLAIMED  @map("claimed")
+  SENDING  @map("sending")
+  SENT     @map("sent")
+  FAILED   @map("failed")
+  SKIPPED  @map("skipped")
+  CANCELED @map("canceled")
+}
+
+enum ActionFeedback {
+  DONE   @map("done")
+  PAUSED @map("paused")
+}
+
+model User {
+  id                   String              @id @db.Uuid
+  email                String              @unique @db.Text
+  timezone             String?             @db.Text
+  status               UserStatus          @default(PENDING_ONBOARDING)
+  onboardingCompletedAt DateTime?          @map("onboarding_completed_at") @db.Timestamptz(6)
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  subscription         Subscription?
+  categories           UserCategory[]
+  categoryStates       UserCategoryState[]
+  sendQueue            SendQueue[]
+  billingEvents        BillingEvent[]
+
+  @@map("users")
+}
+
+model Subscription {
+  id                          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                      String             @unique @map("user_id") @db.Uuid
+  user                        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planKey                     PlanKey            @map("plan_key")
+  status                      SubscriptionStatus
+  stripeCustomerId            String?            @unique @map("stripe_customer_id") @db.Text
+  stripeSubscriptionId        String?            @unique @map("stripe_subscription_id") @db.Text
+  stripeProductId             String?            @map("stripe_product_id") @db.Text
+  stripePriceId               String?            @map("stripe_price_id") @db.Text
+  cancelAtPeriodEnd           Boolean            @default(false) @map("cancel_at_period_end")
+  trialEndsAt                 DateTime?          @map("trial_ends_at") @db.Timestamptz(6)
+  currentPeriodStartsAt       DateTime?          @map("current_period_starts_at") @db.Timestamptz(6)
+  currentPeriodEndsAt         DateTime?          @map("current_period_ends_at") @db.Timestamptz(6)
+  canceledAt                  DateTime?          @map("canceled_at") @db.Timestamptz(6)
+  createdAt                   DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("subscriptions")
+}
+
+model UserCategory {
+  userId       String       @map("user_id") @db.Uuid
+  categorySlug CategorySlug @map("category_slug")
+  position     Int          @db.SmallInt
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, categorySlug])
+  @@unique([userId, position])
+  @@map("user_categories")
+}
+
+model Action {
+  id            String           @id @db.Text
+  categorySlug  CategorySlug     @map("category_slug")
+  title         String           @db.Text
+  instruction   String           @db.Text
+  minutes       Int              @db.SmallInt
+  whyItMatters  String           @map("why_it_matters") @db.Text
+  complexity    ActionComplexity @default(STANDARD)
+  texture       String           @db.Text
+  isFallback    Boolean          @default(false) @map("is_fallback")
+  status        String           @default("active") @db.Text
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  actionItems   EmailActionItem[]
+
+  @@index([categorySlug, status])
+  @@map("actions")
+}
+
+model UserCategoryState {
+  id                    String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                String           @map("user_id") @db.Uuid
+  categorySlug          CategorySlug     @map("category_slug")
+  targetComplexity      ActionComplexity @default(STANDARD) @map("target_complexity")
+  currentBias           ComplexityBias   @default(NEUTRAL) @map("current_bias")
+  consecutiveDoneCount  Int              @default(0) @map("consecutive_done_count")
+  consecutivePauseCount Int              @default(0) @map("consecutive_pause_count")
+  lastActionId          String?          @map("last_action_id") @db.Text
+  lastTexture           String?          @map("last_texture") @db.Text
+  updatedAt             DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categorySlug])
+  @@map("user_category_states")
+}
+
+model SendQueue {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String            @map("user_id") @db.Uuid
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailKind         EmailKind         @map("email_kind")
+  localSendDate     DateTime          @map("local_send_date") @db.Date
+  scheduledForUtc   DateTime          @map("scheduled_for_utc") @db.Timestamptz(6)
+  status            SendQueueStatus   @default(QUEUED)
+  claimToken        String?           @map("claim_token") @db.Uuid
+  claimExpiresAt    DateTime?         @map("claim_expires_at") @db.Timestamptz(6)
+  attemptCount      Int               @default(0) @map("attempt_count")
+  provider          String?           @db.Text
+  providerMessageId String?           @map("provider_message_id") @db.Text
+  subject           String?           @db.Text
+  renderedPayload   Json?             @map("rendered_payload")
+  skipReason        String?           @map("skip_reason") @db.Text
+  errorCode         String?           @map("error_code") @db.Text
+  errorMessage      String?           @map("error_message") @db.Text
+  sentAt            DateTime?         @map("sent_at") @db.Timestamptz(6)
+  failedAt          DateTime?         @map("failed_at") @db.Timestamptz(6)
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  actionItems       EmailActionItem[]
+  emailEvents       EmailEvent[]
+
+  @@unique([userId, emailKind, localSendDate])
+  @@index([status, scheduledForUtc])
+  @@index([claimToken])
+  @@map("send_queue")
+}
+
+model EmailActionItem {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sendQueueId    String          @map("send_queue_id") @db.Uuid
+  sendQueue      SendQueue       @relation(fields: [sendQueueId], references: [id], onDelete: Cascade)
+  categorySlug   CategorySlug    @map("category_slug")
+  actionId       String          @map("action_id") @db.Text
+  action         Action          @relation(fields: [actionId], references: [id])
+  position       Int             @db.SmallInt
+  doneToken      String          @unique @map("done_token") @db.Text
+  pauseToken     String          @unique @map("pause_token") @db.Text
+  feedback       ActionFeedback?
+  feedbackAt     DateTime?       @map("feedback_at") @db.Timestamptz(6)
+  selectionMeta  Json            @default("{}") @map("selection_meta")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([sendQueueId, categorySlug])
+  @@unique([sendQueueId, position])
+  @@map("email_action_items")
+}
+
+model BillingEvent {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String?   @map("user_id") @db.Uuid
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  provider       String    @default("stripe") @db.Text
+  eventType      String    @map("event_type") @db.Text
+  providerEventId String   @unique @map("provider_event_id") @db.Text
+  payload        Json
+  processedAt    DateTime? @map("processed_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([eventType, createdAt])
+  @@map("billing_events")
+}
+
+model EmailEvent {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sendQueueId     String    @map("send_queue_id") @db.Uuid
+  sendQueue       SendQueue @relation(fields: [sendQueueId], references: [id], onDelete: Cascade)
+  provider        String    @default("resend") @db.Text
+  eventType       String    @map("event_type") @db.Text
+  providerEventId String?   @map("provider_event_id") @db.Text
+  occurredAt      DateTime  @map("occurred_at") @db.Timestamptz(6)
+  payload         Json
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([provider, providerEventId])
+  @@index([eventType, occurredAt])
+  @@map("email_events")
+}

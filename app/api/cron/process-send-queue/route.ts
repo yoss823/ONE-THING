@@ -18,6 +18,6 @@ export async function POST(request: Request) {
     ok: true,
     status: "scaffold-only",
     message:
-      "The durable send worker is not implemented yet. Use the blueprint in docs/one-thing-v1-technical-plan.md and the queue logic in lib/cron/send-queue.ts to build the daily, weekly, and monthly processor.",
+      "The process-send-queue worker is not implemented yet. The intended V1 behavior is documented in docs/one-thing-v1-technical-plan.md and lib/cron/send-queue.ts.",
   });
 }

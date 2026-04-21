@@ -24,6 +24,6 @@ export async function POST(request: Request) {
     status: "scaffold-only",
     receivedBytes: payload.length,
     message:
-      "Stripe webhook verification and subscription sync are not implemented yet.",
+      "Stripe signature verification, event idempotency, and subscription sync are not implemented yet. See docs/one-thing-v1-technical-plan.md and lib/billing/plans.ts for the expected V1 mapping.",
   });
 }

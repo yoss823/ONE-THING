@@ -1,303 +1,511 @@
-# ONE THING V1 Technical Plan
+# ONE THING V1 Implementation Blueprint
 
 ## V1 Goal
 
-Ship the fastest credible version of ONE THING: a paid email product that lets a user subscribe, choose 1-3 categories, set a timezone, and receive one daily email at **8:00am local time** with one action per selected category.
+Ship the fastest reliable paid version of ONE THING on the approved stack:
 
-The V1 should optimize for:
+- Next.js + TypeScript + Tailwind on Vercel
+- Supabase Postgres + Supabase Auth
+- Prisma as the application ORM and schema contract
+- Stripe Billing for checkout, subscription state, and plan changes
+- Resend for outbound email and email-event webhooks
+- Vercel Cron for the send-queue worker
 
-- simple operations
-- reliable delivery
-- fast iteration
-- low vendor lock-in
+The product promise for V1 is:
 
-## Launch Category Set
+- a user signs in with email
+- picks 1-3 categories
+- selects one of three billing plans
+- receives a daily 8:00 AM local-time email
+- receives a separate Monday weekly email
+- receives a monthly clarity check that replaces that day's daily email
 
-Use the following six launch categories as the initial catalog:
+The system should optimize for inspectable business logic, reliable sending, and simple exportability.
 
-1. Mental clarity (`mental_clarity`)
-2. Organization (`organization`)
-3. Health / Energy (`health_energy`)
-4. Work / Business (`work_business`)
-5. Personal projects (`personal_projects`)
-6. Relationships (`relationships`)
+## Concrete Product Assumptions
 
-The initial checked-in source of truth for launch content and selection rules lives in `data/action-library/` and is described in `docs/launch-action-library-spec.md`.
+### Pricing Shape
 
-## Recommended Stack
+Use one Stripe product, `one_thing_membership`, with three recurring prices:
 
-### App and Hosting
+1. `monthly` at `$12/month`
+2. `quarterly` at `$30/quarter`
+3. `annual` at `$96/year`
 
-- **Next.js App Router on Vercel**
-- **PostgreSQL** as the only source of truth
-- **Plain SQL migrations** checked into the repo
-- **Server-only rendering and route handlers** for onboarding, settings, admin, and webhooks
+All three plans unlock the same product. They differ only by billing cadence and discount. This is the fastest V1 because it avoids feature gating while still supporting three pricing options.
 
-Why:
+If the approved commercial prices change later, only the code mapping and Stripe price ids need to change.
 
-- Vercel is already the deployment target.
-- Next.js gives one codebase for landing page, authenticated settings, onboarding, and internal cron endpoints.
-- Postgres keeps the core business logic portable; if Vercel changes later, the app can move with minimal rewrite.
-- Plain SQL keeps schema ownership explicit and portable.
+### Email Behavior
 
-### Billing
+Approved cadence rules:
 
-- **Stripe Billing**
-- Use **hosted Stripe Checkout** for signup
-- Use **Stripe Billing Portal** for cancel / payment-method changes
-- Start with **one monthly price**: `$10/month`
-- Configure a **7-day free trial** in Stripe
+- `daily` always sends at 8:00 AM local time except on the monthly clarity day
+- `weekly` sends every Monday as a separate email
+- `monthly_clarity` sends on the first local day of the month and replaces that day's `daily`
 
-Why:
+Collision rules:
 
-- Hosted Stripe pages are much faster and less error-prone than building custom billing UI.
-- Billing Portal removes a large support burden.
-- Only Stripe customer/subscription ids need to be stored locally, which limits lock-in.
+- if the first day of the month is Monday, send `monthly_clarity` at `8:00 AM` local time and `weekly` at `8:10 AM` local time
+- do not queue a `daily` email on a `monthly_clarity` date
 
-### Email Delivery and Tracking
+## Recommended Folder Structure
 
-- **Postmark** for transactional email delivery
-- Track **delivered / bounced / opened / clicked** through webhooks
-- Keep send scheduling in our app, not in the email vendor
+```text
+app/
+  (marketing)/
+    page.tsx
+    pricing/page.tsx
+  (auth)/
+    login/page.tsx
+    auth/callback/route.ts
+  (app)/
+    onboarding/page.tsx
+    account/page.tsx
+    account/billing/route.ts
+  checkout/
+    success/page.tsx
+  t/
+    [token]/
+      done/route.ts
+      pause/route.ts
+  api/
+    billing/
+      checkout/route.ts
+      portal/route.ts
+    onboarding/route.ts
+    cron/
+      process-send-queue/route.ts
+    webhooks/
+      stripe/route.ts
+      resend/route.ts
+    admin/
+      exports/[kind]/route.ts
+lib/
+  auth/
+  billing/
+  cron/
+  email/
+  actions/
+  exports/
+  supabase/
+prisma/
+  schema.prisma
+data/
+  action-library/
+docs/
+db/
+  migrations/
+```
 
-Why:
+## Auth Approach
 
-- ONE THING is email-first, so deliverability is a product requirement, not a later optimization.
-- Postmark is strong for transactional reliability and simple webhook-based event tracking.
-- Scheduling in our system preserves portability to SES, Resend, or another provider later.
+Use Supabase Auth with passwordless email sign-in.
 
-If team preference is stronger for developer ergonomics than deliverability controls, **Resend** is the acceptable fallback. The data model should not depend on either provider.
+Reasons:
 
-### Background Jobs
+- email is already the product channel
+- password reset flows are unnecessary
+- the authenticated user id is a durable join key for billing, onboarding, queue, and exports
 
-- Use a **single cron trigger** that calls a protected internal route every 5 minutes
-- Cron route selects due sends from Postgres and processes them in small batches
-- Compute and persist each user's next send time after every successful run
+Implementation approach:
 
-Why:
+1. User enters email on `/login`.
+2. Supabase sends a magic link or OTP.
+3. The callback route creates or upserts `users` in `public.users` using the Supabase auth user id.
+4. Protected routes in the `(app)` group require a valid Supabase session.
+5. Prisma uses the application tables in `public`; Supabase Auth remains the identity layer.
 
-- This is the smallest reliable scheduler for V1.
-- The job runner is portable: Vercel Cron now, any cron or worker later.
-- Persisting `next_send_at_utc` avoids repeated timezone math on every query.
+Important V1 rule:
 
-## Core Architecture
+- keep `public.users.id` equal to `auth.users.id`
+- do not build a second local auth system
 
-1. User lands on a simple marketing page.
-2. User starts hosted Stripe Checkout.
-3. Stripe webhook creates or updates local `users` and `subscriptions`.
-4. User finishes onboarding:
-   - confirms email
-   - selects 1-3 categories
-   - sets timezone
-5. System calculates `next_send_at_utc` for the next local 8:00am.
-6. Cron route runs every 5 minutes and fetches due users.
-7. For each due user:
-   - pick one action per selected category
-   - create a send record
-   - send one email
-   - store provider message id
-   - compute the next local 8:00am
-8. Provider webhooks append delivery and engagement events.
+## Onboarding Wiring
 
-## Local-Time 8:00am Send Design
+Recommended order:
 
-Store:
+1. Sign in with Supabase Auth.
+2. Render `/onboarding` if `users.onboarding_completed_at` is null.
+3. Collect:
+   - timezone as IANA string
+   - 1-3 selected categories
+   - chosen plan key
+4. `POST /api/onboarding` validates and upserts the profile and categories.
+5. `POST /api/billing/checkout` creates a Stripe Checkout session for the chosen plan.
+6. Stripe success redirects to `/checkout/success`.
+7. Stripe webhook is the source of truth for subscription activation.
+8. When onboarding is complete and subscription is active, enqueue the next `daily`, `weekly`, and `monthly_clarity` sends.
 
-- `timezone` as an IANA zone, for example `America/New_York`
-- `next_send_at_utc` as the canonical scheduler field
+Why auth before checkout:
+
+- no orphaned onboarding records
+- no webhook ambiguity about which app user owns the subscription
+- simpler Billing Portal access later
+
+## Stripe Product And Price Mapping
+
+Use one Stripe product and three recurring prices.
+
+| Plan key | Stripe product lookup key | Stripe price lookup key | Billing interval | Price |
+| --- | --- | --- | --- | --- |
+| `monthly` | `one_thing_membership` | `one_thing_monthly` | month | `$12.00` |
+| `quarterly` | `one_thing_membership` | `one_thing_quarterly` | 3 months | `$30.00` |
+| `annual` | `one_thing_membership` | `one_thing_annual` | year | `$96.00` |
 
 Rules:
 
-- Recompute `next_send_at_utc` only when:
-  - onboarding completes
-  - timezone changes
-  - a daily send finishes
-  - a subscription resumes after pause / payment recovery
-- If a user signs up after local 8:00am, first send is the **next day** at 8:00am local time.
-- Use a timezone-aware library and test DST transitions explicitly.
-- Cron should look back a few minutes and mark rows with a claim token to avoid duplicate sends during retries.
+- store the internal `plan_key` locally alongside Stripe ids
+- treat Stripe as the payment processor, not the application source of truth
+- keep plan entitlements identical across all three plans
+- use Stripe Billing Portal for plan swaps, payment method updates, and cancellation
 
-This is simpler and safer than trying to run timezone-specific cron jobs.
+Stripe metadata to attach on checkout:
 
-## Data Model
+- `user_id`
+- `plan_key`
+- `source=onboarding`
+
+Webhook events to handle:
+
+- `checkout.session.completed`
+- `customer.subscription.created`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+- `invoice.paid`
+- `invoice.payment_failed`
+
+Webhook responsibilities:
+
+- upsert customer and subscription ids
+- sync `subscriptions.status`
+- sync `subscriptions.plan_key`
+- update `users.status`
+- enqueue sends on activation or resume
+- cancel or skip future sends on cancellation or long-term pause
+
+## Database Shape
+
+The checked-in source of truth should be `prisma/schema.prisma`, with SQL migrations derived from it.
 
 ### Core Tables
 
 `users`
 
-- `id`
-- `email` unique
-- `email_verified_at`
-- `timezone`
-- `status` (`pending_onboarding`, `active`, `paused`, `canceled`)
-- `created_at`
-- `updated_at`
+- application profile keyed by Supabase auth id
+- stores email, timezone, lifecycle status, and onboarding completion
 
 `subscriptions`
 
-- `id`
-- `user_id`
-- `stripe_customer_id`
-- `stripe_subscription_id`
-- `stripe_price_id`
-- `status` (`trialing`, `active`, `past_due`, `canceled`, `unpaid`)
-- `trial_ends_at`
-- `current_period_ends_at`
-- `cancel_at_period_end`
-- `created_at`
-- `updated_at`
+- current subscription state per user
+- stores internal `plan_key` plus Stripe ids and billing timestamps
 
 `user_categories`
 
-- `user_id`
-- `category_slug`
-- `position`
-- `created_at`
+- 1-3 ordered categories selected during onboarding or account updates
 
 `actions`
 
-- `id`
-- `category_slug`
-- `title`
-- `instruction`
-- `minutes`
-- `why_it_matters`
-- `complexity` (`lighter`, `standard`, `stretch`)
-- `texture`
-- `status` (`draft`, `active`, `archived`)
-- `is_fallback`
-- `created_at`
-- `updated_at`
+- checked-in or seeded action catalog
+- stores category, copy, duration, complexity, and texture
 
-`daily_sends`
+`user_category_states`
 
-- `id`
-- `user_id`
-- `local_send_date`
-- `scheduled_for_utc`
-- `sent_at`
-- `status` (`queued`, `sending`, `sent`, `failed`, `skipped`)
-- `provider`
-- `provider_message_id`
-- `subject`
-- `error_code`
-- `created_at`
-
-`daily_send_items`
-
-- `id`
-- `daily_send_id`
-- `category_slug`
-- `action_id`
-- `position`
-- `done_token`
-- `done_at`
-- `created_at`
-
-`email_events`
-
-- `id`
-- `daily_send_id`
-- `provider`
-- `event_type`
-- `provider_event_id`
-- `occurred_at`
-- `payload_json`
+- per-user, per-category adaptation snapshot
+- stores streak counters and the latest applied complexity bias
 
 `send_queue`
 
-- `user_id` primary key
-- `next_send_at_utc`
-- `last_sent_at`
-- `job_claimed_at`
-- `job_claim_token`
-- `job_attempts`
+- one row per scheduled email instance
+- supports `daily`, `weekly`, and `monthly_clarity`
+- durable operational outbox queried by cron
 
-### Notes
+`email_action_items`
 
-- Keep the action library separate from send history so content can evolve without rewriting analytics.
-- `daily_sends` and `email_events` should be append-friendly and never reused.
-- `send_queue` is the operational table the cron job queries; it keeps scheduler logic simple.
+- one row per daily action block included in a daily email
+- stores selected action, selection metadata, and `done` / `pause` tokens
 
-## Minimal Online Surface
+`billing_events`
 
-Do not build a broad product UI in V1. The minimum useful surface is:
+- append-only Stripe webhook log for idempotency and auditability
 
-1. Landing page
-2. Checkout success page
-3. Onboarding page for category selection and timezone
-4. Account settings page:
-   - change categories
-   - change timezone
-   - open Billing Portal
-   - pause / cancel
-5. Email action completion endpoint
-6. Admin-only internal page for:
-   - recent sends
-   - failed sends
-   - export trigger
+`email_events`
 
-Do not build archives, dashboards, streak history, or social features in V1.
+- append-only Resend webhook log tied to a queue item
 
-## Export and Portability Strategy
+## API Route Blueprint
 
-Canonical data stays in Postgres. Everything else is replaceable.
+### Public And Auth
 
-V1 export plan:
+- `GET /login`
+- `GET /auth/callback`
+- `GET /checkout/success`
 
-- Nightly **database dump** to an S3-compatible bucket
-- Admin-triggered **CSV exports** for:
-  - users
-  - subscriptions
-  - daily sends
-  - engagement events
-- Optional **NDJSON export** for send and event logs if later analytics tooling needs append-only files
+### App Surface
 
-Principles:
+- `GET /onboarding`
+- `POST /api/onboarding`
+- `GET /account`
+- `POST /api/account/profile`
+- `POST /api/account/categories`
+- `POST /api/account/pause`
+- `POST /api/account/resume`
 
-- Never make the email vendor the source of truth for send history.
-- Never make Stripe the source of truth for product state.
-- Keep category content in Postgres or checked-in seed files, not in a proprietary CMS.
-- Keep the launch seed library and selector rules exportable in checked-in files under `data/action-library/`.
-- If a vendor is replaced, only the adapter layer should change.
+### Billing
 
-## Operational Guardrails
+- `POST /api/billing/checkout`
+- `POST /api/billing/portal`
 
-- Protected cron endpoint with a shared secret
-- Idempotent Stripe and email webhooks
-- Row-level claiming for due sends
-- Alert on repeated send failures or bounce spikes
-- Seed every category with fallback actions before launch
-- Start with plaintext-first email templates plus a light HTML wrapper
+### Worker And Webhooks
 
-## Fastest V1 Build Sequence
+- `POST /api/cron/process-send-queue`
+- `POST /api/webhooks/stripe`
+- `POST /api/webhooks/resend`
 
-### Step 1
+### Tracking Links
 
-Scaffold the Next.js app, Postgres connection, SQL migration folder, and environment contract.
+- `GET /t/[token]/done`
+- `GET /t/[token]/pause`
 
-### Step 2
+### Admin
 
-Implement marketing page, hosted Stripe Checkout entry, webhook handling, and Checkout success page.
+- `GET /api/admin/exports/users`
+- `GET /api/admin/exports/subscriptions`
+- `GET /api/admin/exports/send-queue`
+- `GET /api/admin/exports/email-events`
 
-### Step 3
+## Local-Time 8:00 AM Cron And Send Queue Design
 
-Implement onboarding for category selection and timezone capture, then calculate `next_send_at_utc`.
+### Why Queue Rows Instead Of One `next_send_at_utc`
 
-### Step 4
+V1 must support three email kinds with collision rules. A durable queue row per email instance is easier to reason about and easier to export than a single timestamp field per user.
 
-Implement content seeding from `data/action-library/`, send queue selection, email rendering, and provider webhooks.
+### Queue Rules
 
-### Step 5
+Each active user should always have future queue rows for:
 
-Implement settings page, Billing Portal link, admin exports, and basic operational reporting.
+- the next `daily`
+- the next `weekly`
+- the next `monthly_clarity`
 
-## Recommended First Follow-Up Tickets
+Queue uniqueness:
 
-1. Scaffold the Next.js app and shared environment config.
-2. Create the initial SQL migration for the tables above.
-3. Wire Stripe Checkout, Billing Portal, and subscription webhooks.
-4. Build onboarding for categories and timezone.
-5. Implement content seeding and selection logic using the checked-in action library and adaptation rules.
-6. Implement the cron-driven send loop and Postmark integration.
-7. Add admin CSV export and nightly database backup automation.
+- unique on `user_id + email_kind + local_send_date`
+
+Send times:
+
+- `daily`: `08:00`
+- `monthly_clarity`: `08:00`
+- `weekly`: `08:10` on Mondays so it does not collide with the primary morning email
+
+Monthly replacement rule:
+
+- when the local date is day `1`, create `monthly_clarity`
+- do not create `daily` for that same local date
+
+### Cron Flow
+
+Run Vercel Cron every 5 minutes against `POST /api/cron/process-send-queue`.
+
+Processor loop:
+
+1. Verify `CRON_SECRET`.
+2. Claim due rows with `FOR UPDATE SKIP LOCKED`.
+3. Mark claimed rows with a claim token and expiry timestamp.
+4. For each claimed row:
+   - load user, subscription, categories, and category state
+   - skip if the subscription is inactive
+   - render the email payload
+   - send through Resend
+   - store provider message id
+   - mark row `sent`
+   - enqueue the next row for that email kind
+5. If sending fails, increment attempts and leave the row retryable.
+
+Operational constraints:
+
+- batch size `<= 100`
+- claim expiry `15 minutes`
+- retry backoff via `scheduled_for_utc = now + attempt window`
+- mark unrecoverable rows `failed`, not deleted
+
+## Daily, Weekly, And Monthly Email Behavior
+
+### Daily
+
+Contains one action per selected category.
+
+Each block includes:
+
+- title
+- one-sentence instruction
+- minutes estimate
+- short reason
+- `Done` link
+- `Pause` link
+
+The daily email is the primary product experience.
+
+### Weekly
+
+Monday-only separate email. Keep it lightweight.
+
+Recommended contents:
+
+- previous week's completion count
+- the category with the best response
+- one sentence of recommended focus for the week
+- link to account settings
+
+Do not move the daily action content into the weekly email. Monday still needs the normal daily action email.
+
+### Monthly Clarity
+
+Send on the first local day of the month and replace that day's daily email.
+
+Recommended contents:
+
+- short reflection prompt
+- what categories were most consistently completed last month
+- one intentional adjustment suggestion
+- link to account for category or plan changes
+
+This should be a different template and a different `email_kind`.
+
+## Tracking Link Endpoints For `Done` And `Pause`
+
+Use signed opaque tokens stored on `email_action_items`.
+
+### `GET /t/[token]/done`
+
+Responsibilities:
+
+- verify the token
+- mark the related item `done`
+- increment `user_category_states.consecutive_done_count`
+- reset `consecutive_pause_count`
+- redirect to a minimal confirmation page
+
+### `GET /t/[token]/pause`
+
+Responsibilities:
+
+- verify the token
+- mark the related item `paused`
+- increment `user_category_states.consecutive_pause_count`
+- reset `consecutive_done_count`
+- redirect to a minimal confirmation page that says tomorrow will be lighter
+
+Rules:
+
+- tokens are single-purpose and single-item
+- repeated clicks are idempotent
+- the redirect page should not require login
+
+## Action Selection And Adaptation Structure
+
+Selection should stay deterministic and inspectable.
+
+### Inputs
+
+- user's selected categories
+- active actions in that category
+- recent sends for that user and category
+- current category state
+
+### Selection Rules
+
+1. exclude exact action repeats from the previous 10 category sends
+2. avoid fallback actions unless the normal pool is exhausted
+3. prefer the target complexity from `user_category_states`
+4. avoid the most recent texture when possible
+5. break ties by oldest `last_sent_at`
+
+### Adaptation Rules
+
+- `5` consecutive `done` responses: upshift one complexity tier
+- `3` consecutive `pause` responses: downshift one complexity tier
+- unanswered actions do not change the current tier immediately, but remain visible in analytics
+- the complexity change is stored in `user_category_states.current_bias`
+
+Keep the logic in TypeScript and keep the library data in checked-in JSON so the business rules can be reviewed without opening Stripe, Supabase, or Resend dashboards.
+
+## Minimal Account Area Scope
+
+Only build the account area needed to operate the subscription:
+
+- view current plan
+- open Stripe Billing Portal
+- change billing plan
+- update timezone
+- update 1-3 categories
+- pause or resume emails
+- view the next scheduled send time
+
+Do not build:
+
+- archives
+- streak dashboards
+- category analytics UI
+- editable action history
+
+## Export Strategy
+
+Canonical data lives in Postgres and checked-in JSON.
+
+V1 export surface:
+
+- CSV export routes for users, subscriptions, send queue, and email events
+- JSON or NDJSON export of the action library and adaptation state
+- Prisma schema and SQL migrations committed in the repo
+
+Operational backup:
+
+- rely on Supabase backups for database recovery
+- keep admin export routes for business portability and ad hoc inspection
+
+## Environment And Config Checklist
+
+### Next.js / Core
+
+- `APP_URL`
+- `CRON_SECRET`
+- `ADMIN_EXPORT_TOKEN`
+
+### Supabase
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `DATABASE_URL`
+- `DIRECT_URL`
+
+### Stripe
+
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRODUCT_ONE_THING`
+- `STRIPE_PRICE_MONTHLY`
+- `STRIPE_PRICE_QUARTERLY`
+- `STRIPE_PRICE_ANNUAL`
+- `STRIPE_BILLING_PORTAL_CONFIGURATION_ID`
+
+### Resend
+
+- `RESEND_API_KEY`
+- `RESEND_WEBHOOK_SECRET`
+- `EMAIL_FROM`
+- `EMAIL_REPLY_TO`
+
+## Recommended Build Order
+
+1. Add Supabase Auth and protected app routes.
+2. Add Prisma client, schema migration, and action-library seed.
+3. Implement onboarding and Stripe Checkout.
+4. Implement Stripe webhook sync and Billing Portal.
+5. Implement send queue generation and cron worker.
+6. Implement Resend templates and Resend webhooks.
+7. Add tracking-link endpoints and minimal account pause/resume flows.
+8. Add admin exports.
+
+This keeps the first shippable version on the shortest path while preserving the inspectable business logic needed for later iteration.

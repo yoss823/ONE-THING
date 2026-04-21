@@ -2,40 +2,72 @@
 
 ## Repository Findings
 
-- Repository currently contains a minimal `README.md` and no product or engineering docs.
-- `README.md` defines the product premise: ONE THING is a subscription product that emails users each morning at 8am with simple, concrete actions that take 5-15 minutes.
-- The repo now has two product docs: `docs/one-thing-mvp-brief.md` and `docs/one-thing-v1-technical-plan.md`.
-- The repository now includes a runnable Next.js 16 App Router scaffold with Tailwind, lint/build scripts, a landing page, a checkout success page, and placeholder cron/webhook routes.
-- The first SQL schema scaffold lives at `db/migrations/0001_one_thing_v1.sql`.
-- `.env.example` documents the initial environment contract for Postgres, Stripe, Postmark, and cron auth.
-- Git branch is `main` tracking `origin/main`.
-- Untracked local folders `.agents/` and `.claude/` exist in the worktree and were left untouched because they are unrelated to this task.
-- The repo now uses the six-category launch model: `mental_clarity`, `organization`, `health_energy`, `work_business`, `personal_projects`, and `relationships`.
-- The checked-in launch action library lives under `data/action-library/` with separate files for categories, actions, and adaptation rules.
-- The initial launch library currently contains 66 actions total, including one fallback action per category and explicit `complexity` / `texture` metadata for selection logic.
-- A fresh checkout may need `npm ci` before running `npm run lint` or `npm run build`; both checks passed after installing dependencies from the existing lockfile.
+- The repo already contained a deployable Next.js App Router baseline with a landing page, a checkout success page, and placeholder webhook / cron routes.
+- The previous planning layer was built around an earlier V1 decision set: plain SQL migrations as the primary schema contract, Postmark for email, and one paid monthly plan.
+- The checked-in action library still lives under `data/action-library/` and remains a good fit for the approved V1 because it is already inspectable and exportable.
+- The current product docs before this task conflicted with the approved stack and cadence requirements:
+  - product brief assumed one paid plan
+  - technical plan assumed Postmark instead of Resend
+  - scheduler model assumed a single daily flow instead of daily + Monday weekly + monthly clarity replacement
+- The public homepage copy in `app/page.tsx` also reflected the older one-price / Postmark direction and needed to be updated to avoid repo-level contradiction.
+- The repo had no Prisma schema before this task.
+- The repo had no inspectable TypeScript modules for plan mapping, cadence rules, tracking-link path generation, queue claiming, or action selection / adaptation rules before this task.
 
 ## Changes Made
 
-- Added [`docs/one-thing-mvp-brief.md`](docs/one-thing-mvp-brief.md) as the canonical MVP scope document for ONE THING.
-- Defined the target user as busy professionals who want practical self-improvement guidance with minimal decision-making overhead.
-- Fixed the core MVP journey around a single paid subscription flow, 1-3 category selection, timezone capture, and one daily 8:00am local-time email.
-- Specified the exact email promise: one email per day with exactly one 5-15 minute action per selected category, plus a required fallback action if category content is missing.
-- Updated the launch category set to Mental clarity, Organization, Health / Energy, Work / Business, Personal projects, and Relationships.
-- Chose the initial monetization assumptions: one `$10/month` plan, 7-day free trial, no free tier, and no annual plan at launch.
-- Documented 5 explicit MVP non-goals to prevent scope creep during implementation.
-- Added [`docs/one-thing-v1-technical-plan.md`](docs/one-thing-v1-technical-plan.md) with the recommended V1 stack, background-job design, send scheduling model, data model, export strategy, and minimal online surface.
-- Added [`docs/launch-action-library-spec.md`](docs/launch-action-library-spec.md) to define the launch content contract, action schema, no-repeat rules, texture variation rules, and silent streak-based complexity shifts.
-- Added [`data/action-library/launch-categories.json`](data/action-library/launch-categories.json) as the machine-readable category source of truth for launch.
-- Added [`data/action-library/launch-actions.json`](data/action-library/launch-actions.json) with 66 simple, concrete launch actions across the six categories.
-- Added [`data/action-library/adaptation-rules.json`](data/action-library/adaptation-rules.json) with exportable rules for exact-repeat cooldowns, texture variation, 3-send pause downshifts, and 5-send completion upshifts.
-- Added a minimal Next.js baseline at `app/` so the repo is deployable on Vercel instead of remaining docs-only.
-- Added [`app/api/cron/send-daily/route.ts`](app/api/cron/send-daily/route.ts) as the protected placeholder route for the future claim-and-send worker.
-- Added [`app/api/webhooks/stripe/route.ts`](app/api/webhooks/stripe/route.ts) as the placeholder Stripe webhook route.
-- Added [`app/checkout/success/page.tsx`](app/checkout/success/page.tsx) as the stable post-checkout destination.
-- Added [`db/migrations/0001_one_thing_v1.sql`](db/migrations/0001_one_thing_v1.sql) as the first schema scaffold covering users, subscriptions, categories, content, send history, events, and the send queue.
-- Updated [`db/migrations/0001_one_thing_v1.sql`](db/migrations/0001_one_thing_v1.sql) so category constraints match the six launch categories and the `actions` table now stores `complexity` and `texture`.
-- Added [`.env.example`](.env.example) to define the initial runtime configuration surface.
-- Added the NanoCorp analytics snippet to the root layout.
-- Verified the launch-library JSON files with `jq`.
-- Verified the app and repo state with `npm run lint` and `npm run build`.
+- Rewrote `docs/one-thing-v1-technical-plan.md` into a concrete implementation blueprint for the approved V1 stack:
+  - Next.js + TypeScript + Tailwind on Vercel
+  - Supabase Postgres + Supabase Auth
+  - Prisma
+  - Stripe Billing
+  - Resend
+  - Vercel Cron
+- The new technical blueprint now covers:
+  - folder structure
+  - auth approach
+  - onboarding flow wiring
+  - Stripe mapping for three plans
+  - webhook handling
+  - daily / weekly / monthly email behavior
+  - local-time 8:00 AM queue design
+  - tracking-link endpoints for `Done` and `Pause`
+  - action selection / adaptation structure
+  - minimal account scope
+  - export strategy
+  - environment checklist
+- Updated `docs/one-thing-mvp-brief.md` so the product brief no longer claims a single pricing plan and now reflects the separate Monday weekly email plus monthly clarity replacement behavior.
+- Added `prisma/schema.prisma` as the new primary application schema contract.
+- Replaced `db/migrations/0001_one_thing_v1.sql` so the SQL scaffold now matches the approved-stack design instead of the earlier single-daily / single-plan model.
+- Added `lib/billing/plans.ts` with the concrete three-plan mapping:
+  - `monthly`
+  - `quarterly`
+  - `annual`
+- Added `lib/email/cadence.ts` with explicit cadence rules:
+  - daily except on monthly clarity day
+  - weekly on Monday
+  - monthly clarity on day one of the month
+  - weekly offset at `+10` minutes to remain separate on Monday mornings
+- Added `lib/cron/send-queue.ts` with:
+  - queue claim SQL
+  - retry timing
+  - dedupe key shape
+  - future queue planning helpers
+- Added `lib/actions/selection.ts` with pure TypeScript selection and adaptation logic for:
+  - exact-repeat protection
+  - fallback handling
+  - texture variation
+  - complexity targeting
+  - `done` / `pause` streak evolution
+- Added `lib/email/tracking-links.ts` so tracking-link path generation is explicit and centralized.
+- Updated `.env.example` to reflect the approved runtime contract for Supabase, Prisma direct connections, Stripe three-price mapping, Resend, cron auth, and export auth.
+- Updated `app/page.tsx` so the public landing copy now reflects the approved stack and cadence design rather than the deprecated one.
+- Added `app/api/webhooks/resend/route.ts` as a placeholder for Resend event ingestion.
+- Added `app/api/cron/process-send-queue/route.ts` as the canonical placeholder route matching the new queue design.
+- Updated the existing placeholder cron and Stripe webhook routes so their scaffold messaging points at the new blueprint and support files.
+
+## Verification Notes
+
+- The repo still contains the older launch action library and checkout success surface; those remain compatible with the new blueprint and were left in place.
+- No live billing products, Supabase configuration, or Resend configuration were changed in external systems during this task.
+- `npm ci`, `npm run lint`, and `npm run build` completed successfully after the blueprint update.
+- Commit, push, and deployment verification were still pending at the time these notes were written.

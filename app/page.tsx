@@ -23,9 +23,10 @@ export default function Home() {
                 </h1>
                 <p className="max-w-2xl text-lg leading-8 text-[var(--foreground-soft)] md:text-xl">
                   ONE THING sends one clear action per selected category every
-                  morning at 8:00am local time. This repo now includes the V1
-                  architecture plan, the initial schema scaffold, and the
-                  deployable Next.js baseline.
+                  morning at 8:00am local time, plus a separate Monday weekly
+                  email and a monthly clarity check. This repo now includes the
+                  approved-stack V1 blueprint, Prisma schema, and inspectable
+                  delivery logic.
                 </p>
               </div>
               <div className="flex flex-wrap gap-4">
@@ -46,9 +47,15 @@ export default function Home() {
 
             <div className="grid gap-4">
               {[
-                ["8:00am local time", "Store the IANA timezone and persist the next UTC send timestamp after each run."],
+                [
+                  "8:00am local time",
+                  "Queue concrete email instances in UTC from each user's IANA timezone instead of relying on timezone-specific cron jobs.",
+                ],
                 ["1-3 categories", "Keep onboarding tight and send exactly one action per selected category."],
-                ["Hosted billing", "Use Stripe Checkout and Billing Portal instead of custom subscription UI."],
+                [
+                  "3 billing plans",
+                  "Use one Stripe product with monthly, quarterly, and annual prices instead of feature-gated tiers.",
+                ],
               ].map(([title, copy]) => (
                 <article
                   key={title}
@@ -91,19 +98,19 @@ export default function Home() {
             {[
               [
                 "Stack",
-                "Next.js on Vercel, PostgreSQL as the source of truth, plain SQL migrations, server-rendered pages and route handlers.",
+                "Next.js on Vercel, Supabase Postgres/Auth, Prisma, Stripe Billing, Resend, and route-handler-based app logic.",
               ],
               [
                 "Email",
-                "Postmark for transactional delivery and webhook tracking, with all scheduling logic owned by the app.",
+                "Resend for outbound email and webhook tracking, with all cadence and adaptation logic owned by the app.",
               ],
               [
                 "Scheduling",
-                "A single cron-triggered route runs every 5 minutes and claims due rows from a send queue.",
+                "A single cron-triggered route runs every 5 minutes and claims due queue rows for daily, weekly, and monthly emails.",
               ],
               [
                 "Portability",
-                "Daily exports come from Postgres, not from Stripe or the email vendor, so vendor swaps stay contained.",
+                "Exports come from Postgres and checked-in JSON, not from Stripe or the email vendor, so vendor swaps stay contained.",
               ],
             ].map(([title, copy]) => (
               <article
@@ -127,9 +134,9 @@ export default function Home() {
               </p>
               <ul className="mt-4 space-y-3 text-sm leading-7 text-[rgba(245,239,223,0.84)]">
                 <li>Concise V1 technical plan in <code>docs/one-thing-v1-technical-plan.md</code></li>
-                <li>Initial SQL migration scaffold in <code>db/migrations/0001_one_thing_v1.sql</code></li>
-                <li>Checkout success page and placeholder webhook / cron routes</li>
-                <li>Environment contract for Stripe, Postmark, Postgres, and cron secrets</li>
+                <li>Prisma schema and SQL migration scaffold for Supabase-backed app tables</li>
+                <li>Inspectable billing, cadence, scheduling, and action-selection support files</li>
+                <li>Environment contract for Supabase, Stripe, Resend, Postgres, and cron secrets</li>
               </ul>
             </article>
 
@@ -138,10 +145,10 @@ export default function Home() {
                 Next tasks
               </p>
               <ul className="mt-4 space-y-3 text-sm leading-7 text-[var(--foreground-soft)]">
-                <li>Wire real Stripe Checkout and Billing Portal flows</li>
-                <li>Implement onboarding for category selection and timezone capture</li>
-                <li>Build the send worker, email renderer, and provider webhooks</li>
-                <li>Add admin exports, failure reporting, and nightly backups</li>
+                <li>Wire Supabase Auth, onboarding state, and Stripe Checkout</li>
+                <li>Implement the durable send queue and the 5-minute cron worker</li>
+                <li>Build Resend templates plus the tracking-link confirmation surface</li>
+                <li>Add admin exports, operational dashboards, and recovery tooling</li>
               </ul>
             </article>
           </div>

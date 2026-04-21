@@ -18,12 +18,14 @@ This user:
 ## Core User Journey
 
 1. User lands on the site and understands the promise in under 10 seconds: "one email each morning with the next small action to take."
-2. User subscribes to a single paid plan.
+2. User subscribes to one of three paid billing plans.
 3. User selects 1-3 categories during onboarding.
 4. User confirms their email and timezone.
-5. At 8:00am in their local timezone, user receives one email containing exactly one action for each selected category.
+5. At 8:00am in their local timezone, user receives one daily email containing exactly one action for each selected category.
 6. User opens the email, picks one action to do immediately, and can mark each action as done from the email.
-7. User can change categories or cancel from their account settings.
+7. On Mondays, user also receives a separate weekly email.
+8. On the first day of the month, user receives a monthly clarity check instead of that day's daily email.
+9. User can change categories, change plan, or cancel from their account settings.
 
 ## Daily Email Promise
 
@@ -73,17 +75,18 @@ Categories explicitly excluded from MVP:
 
 ## Subscription Assumptions
 
-MVP will launch with one paid plan only:
+MVP will launch with three billing plans that all unlock the same product:
 
-- `$10/month`
-- 7-day free trial
-- no annual plan at launch
-- no free tier beyond the trial
+- `$12/month`
+- `$30/quarter`
+- `$96/year`
+- 7-day free trial on all plans
+- no permanently free tier
 - one subscription includes up to 3 categories
 
 Assumptions behind this choice:
 
-- one plan reduces decision friction and implementation scope
+- billing cadence choices are acceptable if entitlements stay identical
 - the product value is the daily system, not premium feature gating
 - a trial is necessary because value is established through repeated use, not a one-time visit
 
@@ -98,12 +101,13 @@ The MVP will not include:
 1. AI-generated personalized actions per user
 2. Mobile app or push notifications
 3. Community, streak leaderboards, or social accountability features
-4. More than one pricing tier
+4. Feature-gated premium tiers
 5. Deep content libraries, archives, or educational courses
 
 ## Product Decisions To Hold Constant
 
 - ONE THING is an email-first product, not a content platform.
 - The product sells consistency and clarity, not customization depth.
+- Pricing choices may vary by billing cadence, not by feature access.
 - Every user should understand what to do next without opening any other page.
 - The implementation should optimize for reliable sending, simple onboarding, and easy category management before anything else.
