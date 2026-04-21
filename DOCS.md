@@ -71,3 +71,31 @@
 - No live billing products, Supabase configuration, or Resend configuration were changed in external systems during this task.
 - `npm ci`, `npm run lint`, and `npm run build` completed successfully after the blueprint update.
 - Commit, push, and deployment verification were still pending at the time these notes were written.
+
+## Repository Findings - 2026-04-21 Launch Category Content Task
+
+- `docs/launch-action-library-spec.md` defines the checked-in content contract for launch actions and confirms the core authoring fields needed for email blocks:
+  - `title`
+  - `instruction`
+  - `minutes`
+  - `why_it_matters`
+- `docs/one-thing-mvp-brief.md` confirms the MVP promise that each daily email action must be completable in 5-15 minutes and usable directly in email without extra explanation.
+- The existing library under `data/action-library/launch-actions.json` already covers multiple categories, but the repo did not yet contain a dedicated single-category launch sample file with rationale at the top.
+- `organization` is the best fit for a single-category MVP sample because it is broadly relevant to the target user, low-risk, and easy to express as short, concrete tasks without requiring job-specific context.
+
+## Changes Made - 2026-04-21 Launch Category Content Task
+
+- Added `data/action-library/mvp-organization-actions.json`.
+- The new file contains:
+  - category metadata for `organization`
+  - a short launch rationale at the top
+  - an explicit list of email-ready fields
+  - 30 original organization actions written in the existing content style
+  - one fallback action inside the 30-action set
+- The new actions were written to stay within the MVP contract:
+  - 5-15 minutes each
+  - verb-first titles
+  - one-sentence instructions
+  - short practical reasons
+  - non-repetitive physical and digital organization tasks
+- Validated the new file with `jq`, including JSON parsing and a final action count of 30.
