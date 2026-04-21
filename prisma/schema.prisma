@@ -26,6 +26,7 @@ enum UserEventType {
 model User {
   id              String           @id @default(uuid()) @db.Uuid
   email           String           @unique @db.Text
+  timezone        String?          @db.Text
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   subscription    Subscription?
   preference      UserPreference?
@@ -77,11 +78,11 @@ model Action {
 model DailySend {
   id       String   @id @default(uuid()) @db.Uuid
   userId   String   @map("user_id") @db.Uuid
-  actionId String   @map("action_id") @db.Text
+  actionId String?  @map("action_id") @db.Text
   sentAt   DateTime @default(now()) @map("sent_at") @db.Timestamptz(6)
   status   String   @db.Text
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  action   Action   @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  action   Action?  @relation(fields: [actionId], references: [id], onDelete: Cascade)
 
   @@index([userId, sentAt])
   @@index([actionId, sentAt])

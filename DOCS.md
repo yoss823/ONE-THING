@@ -710,3 +710,76 @@
 - That verification attempt failed locally before opening the site because `agent-browser` does not currently have a Chrome binary available in this environment:
   - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
 - No second deployment verification attempt was made.
+
+## Repository Findings - 2026-04-21 Daily Email Cron Task
+
+- `DOCS.md` was present and still the required first read before re-exploring the repo.
+- The repo already had email-delivery building blocks, but the exact task contract was not present yet:
+  - `app/api/cron/send-daily/route.ts` and `app/api/cron/process-send-queue/route.ts` were still scaffold-only
+  - there was no `app/api/cron/daily-email/route.ts`
+  - there was no `vercel.json`
+- The checked-in Prisma schema could not satisfy "8:00 AM in the user's local timezone" because `users` did not yet have a `timezone` column.
+- The checked-in schema also did not contain a `DailyDeliveryLog` model or table; the existing `daily_sends` table is the repo's schema-equivalent delivery log with `user_id`, `action_id`, `status`, and `sent_at`.
+- There was no shipped `selectActionForUser(user)` helper in the codebase despite the task assuming one already existed.
+- The live database matched the checked-in Prisma schema before this task:
+  - `users` had only `id`, `email`, and `created_at`
+  - `daily_sends.action_id` was required
+- The live Vercel project did not have the secrets needed for this feature fully configured before this task:
+  - `CRON_SECRET` was missing
+  - `RESEND_API_KEY` was missing
+- Repo-wide verification surfaced two pre-existing blockers unrelated to the new cron route itself:
+  - `emails/DailyActionEmail.tsx` imported `react-dom/server`, which Next.js 16 rejected during route build
+  - `app/welcome/page.tsx` triggered the `react-hooks/set-state-in-effect` lint rule and had an unused `sessionId`
+
+## Changes Made - 2026-04-21 Daily Email Cron Task
+
+- Added `app/api/cron/daily-email/route.ts`.
+- The new cron route:
+  - supports both `GET` and `POST`
+  - enforces `Authorization: Bearer ${CRON_SECRET}`
+  - returns `401` on bad auth and `503` when required server config is missing
+  - queries active subscribers via Prisma with:
+    - `subscription.status = 'active'`
+    - non-null `timezone`
+    - non-null preferences
+  - filters each candidate in code to the `8:00 AM` to `8:10 AM` local-time window using the user's stored timezone
+  - skips users already marked `sent` for the same local calendar day so the 10-minute cron cadence does not double-send
+  - isolates each user send in its own `try/catch` so one failure never aborts the batch
+  - returns `{ sent: N }`
+- Added `lib/actions/selectActionForUser.ts`.
+- The new helper:
+  - exports a reusable Prisma include shape for cron-user loading
+  - builds per-category selection state from existing `daily_sends`, `user_events`, `user_preferences`, and `adaptation_state`
+  - picks one action per selected category using the existing `selectAction(...)` adaptation primitives
+  - respects the user's available minutes and energy level when choosing a base complexity
+- Added `vercel.json` with a 10-minute cron schedule for `/api/cron/daily-email`.
+- Updated `prisma/schema.prisma` to support the task:
+  - added `User.timezone`
+  - made `DailySend.actionId` nullable so failed sends can still be logged when action selection or delivery fails before a durable action id is available
+- Added `prisma/migrations/20260421222500_add_user_timezone_for_daily_email/migration.sql`.
+- The migration:
+  - adds `users.timezone`
+  - makes `daily_sends.action_id` nullable
+  - adds an index on `subscriptions.status`
+- Updated `README.md` with the cron route and env requirements.
+- Fixed two repo-wide verification blockers while landing this feature:
+  - rewrote `emails/DailyActionEmail.tsx` as a plain string renderer so App Route builds no longer trip on `react-dom/server`
+  - refactored `app/welcome/page.tsx` to use lazy initial state instead of `setState` inside `useEffect`
+- Updated `lib/email/sendDailyAction.ts` so Resend is initialized lazily at send time rather than at module import time. This lets the app build without a local `RESEND_API_KEY` while still failing clearly at runtime if the key is missing.
+- Set `CRON_SECRET` on the live Vercel project for both `production` and `preview`.
+
+## Verification Notes - 2026-04-21 Daily Email Cron Task
+
+- `npm ci` was required because the checkout did not have local dependencies restored.
+- `DIRECT_URL="${DIRECT_URL:-$DATABASE_URL}" npm run db:generate` passed.
+- `DIRECT_URL="${DIRECT_URL:-$DATABASE_URL}" npm run db:migrate` passed and applied `20260421222500_add_user_timezone_for_daily_email`.
+- Direct Postgres verification confirmed:
+  - `users.timezone` now exists and is nullable
+  - `daily_sends.action_id` is now nullable
+- `npm run lint` passed after the welcome-page cleanup.
+- `npm run build` passed after:
+  - removing `react-dom/server` from the email module
+  - making Resend initialization lazy
+- `git diff --check` passed.
+- `nanocorp vercel env list` confirmed `CRON_SECRET` is now present for `production` and `preview`.
+- `nanocorp vercel env list` also confirmed `RESEND_API_KEY` is still not configured on the live project, so production email sends remain blocked until that secret is added.

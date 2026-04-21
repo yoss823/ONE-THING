@@ -1,32 +1,52 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
+
+type OnboardingState = {
+  categories: string[]
+  energy: string
+  minutes: string
+}
+
+function readOnboardingState(): OnboardingState {
+  if (typeof window === "undefined") {
+    return {
+      categories: [],
+      energy: "",
+      minutes: "",
+    }
+  }
+
+  try {
+    const raw = localStorage.getItem("onboarding")
+
+    if (!raw) {
+      return {
+        categories: [],
+        energy: "",
+        minutes: "",
+      }
+    }
+
+    const data = JSON.parse(raw)
+
+    return {
+      categories: Array.isArray(data.categories) ? data.categories : [],
+      energy: typeof data.energyLevel === "string" ? data.energyLevel : "",
+      minutes:
+        data.availableMinutes === undefined ? "" : String(data.availableMinutes),
+    }
+  } catch {
+    return {
+      categories: [],
+      energy: "",
+      minutes: "",
+    }
+  }
+}
 
 export default function WelcomePage() {
-  const params = useSearchParams()
-  params.get("session_id")
-  const [categories, setCategories] = useState<string[]>([])
-  const [energy, setEnergy] = useState("")
-  const [minutes, setMinutes] = useState("")
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      try {
-        const raw = localStorage.getItem("onboarding")
-        if (raw) {
-          const data = JSON.parse(raw)
-          if (Array.isArray(data.categories)) setCategories(data.categories)
-          if (data.energyLevel) setEnergy(data.energyLevel)
-          if (data.availableMinutes) setMinutes(String(data.availableMinutes))
-        }
-      } catch {}
-    })
-
-    return () => {
-      window.cancelAnimationFrame(frame)
-    }
-  }, [])
+  const [{ categories, energy, minutes }] = useState(readOnboardingState)
 
   return (
     <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fff", padding: "2rem" }}>
