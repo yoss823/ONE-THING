@@ -595,3 +595,45 @@
 - The deployment verification attempt could not complete because the local environment does not have a Chrome binary available for `agent-browser`:
   - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
 - No second deployment verification attempt was made.
+
+## Repository Findings - 2026-04-21 Welcome Confirmation Task
+
+- `DOCS.md` was present and still reduced rediscovery work before touching the repo.
+- The repo already contained `app/welcome/page.tsx`, but it was still a placeholder success screen:
+  - it only echoed the `session_id`
+  - it did not call Stripe
+  - it did not parse checkout metadata
+  - its copy and CTAs did not match the requested calm post-checkout confirmation content
+- `app/api/checkout/route.ts` already redirects successful Stripe Checkout sessions to `/welcome?session_id={CHECKOUT_SESSION_ID}`, so the route wiring for this page was already in place.
+- The existing app typography and visual language for marketing / confirmation surfaces comes from:
+  - `Fraunces` via `--font-display`
+  - `IBM Plex Sans` via `--font-body`
+  - warm neutral colors defined in `app/globals.css`
+- The repo does not currently contain an `app/account/page.tsx` route, so the required `/account` management link on the welcome page will currently point at a not-yet-built account surface.
+
+## Changes Made - 2026-04-21 Welcome Confirmation Task
+
+- Replaced `app/welcome/page.tsx` with a Node runtime Server Component that renders dynamically at request time.
+- The new welcome page now:
+  - reads `searchParams.session_id`
+  - validates and normalizes `session_id` values, including array-shaped query params
+  - retrieves the Stripe Checkout Session with `stripe.checkout.sessions.retrieve`
+  - extracts `customer_email`, `metadata.categories`, `metadata.energyLevel`, and `metadata.availableMinutes`
+  - parses `metadata.categories` from JSON
+  - validates the parsed confirmation data before rendering
+  - falls back to the requested support message when the session id is missing, invalid, or the retrieved session data is incomplete
+- Reworked the page layout to the requested minimal confirmation treatment:
+  - white background
+  - centered column with max width `480px`
+  - generous whitespace
+  - exact requested header, body copy, category block, email confirmation line, and `/account` management link
+  - existing project fonts preserved through the global font variables instead of introducing a new type stack
+
+## Verification Notes - 2026-04-21 Welcome Confirmation Task
+
+- `npm run lint` initially failed because the checkout did not have local dependencies installed (`eslint: not found`).
+- Restored dependencies successfully with `npm ci`.
+- `npm run build` then failed on an existing Prisma client type mismatch in `app/api/track/route.ts`, not on the new welcome page implementation.
+- Regenerated the Prisma client successfully with `DIRECT_URL="${DIRECT_URL:-$DATABASE_URL}" npm run db:generate`.
+- `npm run lint` passed after dependency restore.
+- `npm run build` passed after Prisma client regeneration.
