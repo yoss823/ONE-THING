@@ -238,6 +238,88 @@
 - Added `content/one-thing/social/one-thing-14-day-calendar.csv`.
 - The CSV mirrors the 14-day calendar in a scheduler-friendly format with per-platform posting windows and full post copy.
 
+## Repository Findings - 2026-04-21 Prisma / Database Task
+
+- `DOCS.md` was present and accurate enough to avoid rediscovering the earlier content and blueprint work.
+- The repo already had a `prisma/schema.prisma`, but it described a broader earlier V1 data model and did not match the focused table contract requested for this task.
+- The previous Prisma schema included these models:
+  - `User`
+  - `Subscription`
+  - `UserCategory`
+  - `Action`
+  - `UserCategoryState`
+  - `SendQueue`
+  - `EmailActionItem`
+  - `BillingEvent`
+  - `EmailEvent`
+- The repo did not have a `prisma/migrations/` folder before this task.
+- `.env.example` already contained both `DATABASE_URL` and `DIRECT_URL`, but the example values were generic local Postgres strings rather than explicit Supabase pooled/direct placeholders.
+- The checked-in seed content source is under `data/action-library/`:
+  - `launch-categories.json` contains the 6 launch categories required by the task
+  - `launch-actions.json` contains 66 actions total, 11 per category
+  - `mvp-organization-actions.json` contains 30 organization actions
+- Because the non-organization categories only had 11 checked-in actions each, the seed implementation for this task needs deterministic expansion from existing source content to reach the required minimum of 30 actions per category without inventing a second hidden source of truth.
+- The runtime environment exposed a live `DATABASE_URL`, but not a `DIRECT_URL` environment variable.
+- A quick Postgres check succeeded against the configured database:
+  - database: `neondb`
+  - user: `neondb_owner`
+  - non-system tables present before migration: none
+
+## Changes Made - 2026-04-21 Prisma / Database Task
+
+- Replaced `prisma/schema.prisma` with the focused database contract requested for this task.
+- The new schema now contains these tables:
+  - `users`
+  - `subscriptions`
+  - `user_preferences`
+  - `actions`
+  - `daily_sends`
+  - `user_events`
+  - `adaptation_state`
+- The new schema also adds the minimum supporting enums needed by the contract:
+  - `ActionCategory`
+  - `UserEventType`
+- Updated `.env.example` so the checked-in examples explicitly show the Supabase pooled `DATABASE_URL` and direct `DIRECT_URL` split Prisma expects.
+- Added Prisma runtime tooling to `package.json` and created `prisma.config.ts` so migrations and seeds run from checked-in config instead of the deprecated `package.json#prisma` path.
+- Added `prisma/migrations/20260421133000_initial/migration.sql`.
+- Added `prisma/migrations/migration_lock.toml`.
+- Added `prisma/seed.ts`.
+- The seed implementation uses the checked-in content under `data/action-library/`:
+  - `mvp-organization-actions.json` provides the 30 checked-in organization rows directly
+  - `launch-actions.json` provides the other five categories, expanded deterministically from the existing source rows so each category reaches at least 30 seedable actions without introducing a separate hidden content source
+- The final seeded category counts are:
+  - `mental_clarity`: 31
+  - `organization`: 30
+  - `health_energy`: 31
+  - `work_business`: 31
+  - `personal_projects`: 31
+  - `relationships`: 31
+
+## Verification Notes - 2026-04-21 Prisma / Database Task
+
+- `npm install` completed successfully.
+- `npx prisma validate` completed successfully.
+- `npx prisma generate` completed successfully.
+- `npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script` was used to generate the checked-in initial migration SQL.
+- `DIRECT_URL="${DIRECT_URL:-$DATABASE_URL}" npx prisma migrate deploy` completed successfully against the live Postgres database.
+- `DIRECT_URL="${DIRECT_URL:-$DATABASE_URL}" npx prisma db seed` completed successfully after the migration was applied.
+- `npx prisma migrate status` reported: database schema is up to date.
+- Direct Postgres verification showed the required public tables now exist:
+  - `users`
+  - `subscriptions`
+  - `user_preferences`
+  - `actions`
+  - `daily_sends`
+  - `user_events`
+  - `adaptation_state`
+- Direct Postgres verification showed the `actions` row counts per category match the seeded totals listed above.
+- `npm run lint` passed.
+- `npm run build` passed.
+- One-time production apply command after setting both Supabase env vars:
+  - `npx prisma migrate deploy && npx prisma db seed`
+- Fallback command if only a single Postgres URL is available temporarily:
+  - `DIRECT_URL="$DATABASE_URL" npx prisma migrate deploy && DIRECT_URL="$DATABASE_URL" npx prisma db seed`
+
 ## Verification Notes - 2026-04-21 Social Media Setup Task
 
 - Reviewed the new files directly in the workspace after creation.
