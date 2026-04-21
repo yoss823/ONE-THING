@@ -202,3 +202,45 @@
 - The deployment verification attempt could not complete because the local environment does not have a Chrome binary available for `agent-browser`:
   - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
 - No second deployment verification attempt was made.
+
+## Repository Findings - 2026-04-21 Social Media Setup Task
+
+- `DOCS.md` was present and materially reduced rediscovery work for this task.
+- The repo already has a stable split between product documentation in `docs/` and reusable brand/content assets in `content/one-thing/`.
+- The existing ONE THING voice in the repo is calm, practical, and low-hype:
+  - short sentences
+  - clarity over intensity
+  - operational specifics over broad inspiration
+- `content/one-thing/marketing.ts` is the clearest source for on-brand positioning:
+  - "one email. one next step."
+  - reduced decision friction
+  - useful before the day gets noisy
+- The current repo did not yet contain any dedicated social-media setup or publishing assets for X, LinkedIn, or Instagram.
+
+## Changes Made - 2026-04-21 Social Media Setup Task
+
+- Added `docs/one-thing-social-media-setup-plan.md`.
+- The setup plan includes:
+  - channel role definitions
+  - primary and fallback handle recommendations
+  - profile asset guidance
+  - profile copy for X, LinkedIn, and Instagram
+  - hashtag and posting rhythm guidance
+  - credential handoff checklist
+  - recommended setup order
+  - pinned / introductory post guidance
+- Added `content/one-thing/social/one-thing-14-day-calendar.md`.
+- The readable calendar includes 14 consecutive days of coordinated launch copy with:
+  - concrete dates from April 22, 2026 through May 5, 2026
+  - one theme per day
+  - separate X, LinkedIn, and Instagram versions for each day
+  - calm, text-first copy with lightly adapted platform tone
+- Added `content/one-thing/social/one-thing-14-day-calendar.csv`.
+- The CSV mirrors the 14-day calendar in a scheduler-friendly format with per-platform posting windows and full post copy.
+
+## Verification Notes - 2026-04-21 Social Media Setup Task
+
+- Reviewed the new files directly in the workspace after creation.
+- Ran `git diff --check` and it passed.
+- No application code changed, so `npm run build` and deployment verification were not necessary for this task.
+- The task is documentation-only, so no runtime verification step was required before commit and push.
