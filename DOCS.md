@@ -1,5 +1,19 @@
 # DOCS
 
+## Changes Made - 2026-04-21 Onboarding Page Task
+
+- Added `app/onboarding/page.tsx` — full 4-step client-side funnel:
+  - Step 1: 6 category cards, max 3 selectable, shows price inline
+  - Step 2: Energy level radio (Low / Medium / High)
+  - Step 3: Available time radio (5 / 10 / 15 min)
+  - Step 4: Email input → redirects to Stripe payment link
+  - Saves `{categories, energy, time}` to localStorage before redirect
+  - Reads `NEXT_PUBLIC_STRIPE_PAYMENT_LINK_{1,2,3}CAT` for redirect URL
+  - Passes `?prefilled_email=` to Stripe
+- Added `NEXT_PUBLIC_STRIPE_PAYMENT_LINK_1CAT`, `2CAT`, `3CAT` to `.env.example`
+- Updated `tsconfig.json` to exclude `prisma/seed.ts` from Next.js TS build (pre-existing type error was causing build failure)
+- Build passes; committed and pushed to `main`.
+
 ## Repository Findings
 
 - The repo already contained a deployable Next.js App Router baseline with a landing page, a checkout success page, and placeholder webhook / cron routes.
