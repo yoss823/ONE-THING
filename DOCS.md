@@ -197,4 +197,8 @@
 - `npm ci` was required because `node_modules` was absent in the checkout.
 - `npm run lint` passed after dependencies were installed.
 - `npm run build` passed after the landing-page and template changes.
-- Commit, push, and the required single deployment verification attempt were still pending at the time these notes were written.
+- The content and page changes were committed on `main` and pushed to `origin/main`.
+- After the required 90-second wait, one deployment verification attempt was made with `agent-browser open https://onestep.nanocorp.app`.
+- The deployment verification attempt could not complete because the local environment does not have a Chrome binary available for `agent-browser`:
+  - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
+- No second deployment verification attempt was made.
