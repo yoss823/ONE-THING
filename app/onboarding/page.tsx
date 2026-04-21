@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { getPlanForCategoryCount } from "@/lib/billing/plans";
+
 const CATEGORIES = [
   "Mental clarity",
   "Organization",
@@ -29,21 +31,14 @@ const PRICE_MAP: Record<number, string> = {
   3: "$9.99/month",
 };
 
-function getStripeLink(count: number): string {
-  const links: Record<number, string | undefined> = {
-    1: process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK_1CAT,
-    2: process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK_2CAT,
-    3: process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK_3CAT,
-  };
-  return links[count] ?? "";
-}
-
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [energy, setEnergy] = useState<string>("");
   const [time, setTime] = useState<string>("");
   const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState("");
 
   const totalSteps = 4;
 
@@ -61,7 +56,16 @@ export default function OnboardingPage() {
     setStep((s) => s + 1);
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
+    const selectedPlan = getPlanForCategoryCount(selectedCategories.length);
+
+    if (!selectedPlan) {
+      setSubmissionError("Choose 1 to 3 categories before continuing.");
+      return;
+    }
+
+    const [, plan] = selectedPlan;
+
     // Store answers in localStorage
     const answers = {
       categories: selectedCategories,
@@ -74,15 +78,37 @@ export default function OnboardingPage() {
       // ignore storage errors
     }
 
-    // Build Stripe URL
-    const baseUrl = getStripeLink(selectedCategories.length);
-    if (!baseUrl) return;
+    setSubmissionError("");
+    setIsSubmitting(true);
 
-    const url = new URL(baseUrl);
-    if (email) {
-      url.searchParams.set("prefilled_email", email);
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          priceId: plan.priceId,
+          email,
+          categories: selectedCategories,
+          energyLevel: energy,
+          availableMinutes: Number(time),
+        }),
+      });
+
+      const data = (await response.json()) as { error?: string; url?: string };
+
+      if (!response.ok || !data.url) {
+        setSubmissionError(data.error ?? "Unable to start Stripe checkout.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      window.location.assign(data.url);
+    } catch {
+      setSubmissionError("Unable to start Stripe checkout.");
+      setIsSubmitting(false);
     }
-    window.location.href = url.toString();
   }
 
   return (
@@ -122,6 +148,8 @@ export default function OnboardingPage() {
             email={email}
             onChange={setEmail}
             onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+            error={submissionError}
           />
         )}
       </div>
@@ -308,13 +336,17 @@ function Step4({
   email,
   onChange,
   onSubmit,
+  isSubmitting,
+  error,
 }: {
   email: string;
   onChange: (v: string) => void;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
+  isSubmitting: boolean;
+  error: string;
 }) {
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && isValid) {
+    if (e.key === "Enter" && isValid && !isSubmitting) {
       onSubmit();
     }
   }
@@ -345,12 +377,14 @@ function Step4({
       <div className="mt-8">
         <button
           onClick={onSubmit}
-          disabled={!isValid}
+          disabled={!isValid || isSubmitting}
           className="bg-[#111] text-white text-sm font-medium px-7 py-3.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          Continue to payment
+          {isSubmitting ? "Starting checkout..." : "Continue to payment"}
         </button>
       </div>
+
+      {error ? <p className="mt-4 text-sm text-[#b42318]">{error}</p> : null}
     </div>
   );
 }

@@ -1,5 +1,59 @@
 # DOCS
 
+## Repository Findings - 2026-04-21 Stripe Checkout Wiring Task
+
+- `DOCS.md` was present and materially reduced rediscovery work for this task.
+- The current onboarding flow in `app/onboarding/page.tsx` is fully client-side and still redirects users to `NEXT_PUBLIC_STRIPE_PAYMENT_LINK_{1,2,3}CAT` values.
+- The repo does not currently contain `app/api/checkout/route.ts`.
+- `lib/billing/plans.ts` already defines three category tiers, but it still resolves live Stripe prices indirectly from env vars and does not yet export the simpler `PLANS` mapping requested for checkout use.
+- `.env.example` already contains Stripe placeholders, but the three `STRIPE_PRICE_ID_*` values are still placeholders and the deprecated `NEXT_PUBLIC_STRIPE_PAYMENT_LINK_*` variables are still present.
+- `package.json` does not currently include the `stripe` npm package.
+- The existing Stripe webhook route at `app/api/webhooks/stripe/route.ts` is still scaffold-only, so the new checkout session metadata needs to be shaped for future webhook work but will not be consumed yet by the checked-in route.
+- The repo does not currently contain `app/welcome/page.tsx`, even though the requested Stripe success flow needs `/welcome?session_id=...` as the return target.
+
+## Changes Made - 2026-04-21 Stripe Checkout Wiring Task
+
+- Updated `lib/billing/plans.ts` to export a concrete `PLANS` mapping keyed by tier with:
+  - real Stripe test-mode `priceId` values
+  - plan `label`
+  - monthly `price`
+  - `categoryCount`
+- Kept plan helper functions in `lib/billing/plans.ts` so the rest of the repo can still resolve a plan by tier, category count, or Stripe price id.
+- Updated `.env.example` to:
+  - add `NEXT_PUBLIC_BASE_URL=http://localhost:3000`
+  - replace placeholder `STRIPE_PRICE_ID_{1,2,3}CAT` values with the real test-mode ids
+  - keep `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in the documented runtime contract
+  - remove the deprecated `NEXT_PUBLIC_STRIPE_PAYMENT_LINK_*` variables
+- Added `app/api/checkout/route.ts` as a Node runtime Stripe Checkout Session endpoint that:
+  - accepts `priceId`, `email`, `categories`, `energyLevel`, and `availableMinutes`
+  - validates the requested plan against the category count
+  - creates a Stripe subscription checkout session with `customer_email`
+  - uses `${NEXT_PUBLIC_BASE_URL}/welcome?session_id={CHECKOUT_SESSION_ID}` for success and `${NEXT_PUBLIC_BASE_URL}/onboarding` for cancel
+  - writes onboarding data into both checkout-session metadata and subscription metadata
+  - returns the hosted Stripe checkout `url`
+- Updated `app/onboarding/page.tsx` so the final step now:
+  - resolves the correct Stripe `priceId` from the selected category count
+  - POSTs onboarding data to `/api/checkout`
+  - redirects to the returned Stripe-hosted checkout URL
+  - shows loading and inline error state instead of failing silently
+- Added `app/welcome/page.tsx` so the required Stripe success redirect target is now a real page instead of a 404.
+- Added the `stripe` npm dependency to the project.
+
+## Verification Notes - 2026-04-21 Stripe Checkout Wiring Task
+
+- `npm install stripe` completed successfully.
+- `npm run lint` passed after the checkout wiring changes.
+- `npm run build` passed after the checkout wiring changes.
+- `nanocorp vercel env list` showed that the live Vercel project currently only has `DATABASE_URL` configured.
+- Set these live Vercel env vars with `nanocorp vercel env set`:
+  - `NEXT_PUBLIC_BASE_URL=https://onestep.nanocorp.app`
+  - `STRIPE_PRICE_ID_1CAT=price_1TOkW68Jf6UbCUSKza0ksnKB`
+  - `STRIPE_PRICE_ID_2CAT=price_1TOkXA8Jf6UbCUSKaHcYRnzA`
+  - `STRIPE_PRICE_ID_3CAT=price_1TOkY18Jf6UbCUSKaJykyfqT`
+- A follow-up `nanocorp vercel env list` confirmed those four variables are now present for `production` and `preview`.
+- The deployed checkout route will still require follow-up Vercel env configuration for `STRIPE_SECRET_KEY` before production checkout session creation can succeed.
+- `STRIPE_SECRET_KEY` is still missing from the live Vercel project, so production checkout session creation remains blocked until that secret is provided.
+
 ## Changes Made - 2026-04-21 Onboarding Page Task
 
 - Added `app/onboarding/page.tsx` — full 4-step client-side funnel:

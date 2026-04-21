@@ -6,93 +6,59 @@ export const PLAN_KEYS = [
 
 export type PlanKey = (typeof PLAN_KEYS)[number];
 
-type PlanDefinition = {
-  planKey: PlanKey;
+export type Plan = {
+  priceId: string;
   label: string;
-  priceCents: number;
-  interval: "month";
-  intervalCount: 1;
-  trialDays: 0;
-  stripe: {
-    productLookupKey: string;
-    priceLookupKey: string;
-    priceEnvVar:
-      | "STRIPE_PRICE_ID_1CAT"
-      | "STRIPE_PRICE_ID_2CAT"
-      | "STRIPE_PRICE_ID_3CAT";
-  };
+  price: number;
+  categoryCount: 1 | 2 | 3;
 };
 
-export const PLAN_DEFINITIONS: Record<PlanKey, PlanDefinition> = {
+export const PLANS: Record<PlanKey, Plan> = {
   oneCategory: {
-    planKey: "oneCategory",
+    priceId: "price_1TOkW68Jf6UbCUSKza0ksnKB",
     label: "ONE THING — 1 Category",
-    priceCents: 499,
-    interval: "month",
-    intervalCount: 1,
-    trialDays: 0,
-    stripe: {
-      productLookupKey: "one_thing_1_category",
-      priceLookupKey: "one_thing_1_category_monthly",
-      priceEnvVar: "STRIPE_PRICE_ID_1CAT",
-    },
+    price: 4.99,
+    categoryCount: 1,
   },
   twoCategories: {
-    planKey: "twoCategories",
+    priceId: "price_1TOkXA8Jf6UbCUSKaHcYRnzA",
     label: "ONE THING — 2 Categories",
-    priceCents: 799,
-    interval: "month",
-    intervalCount: 1,
-    trialDays: 0,
-    stripe: {
-      productLookupKey: "one_thing_2_categories",
-      priceLookupKey: "one_thing_2_categories_monthly",
-      priceEnvVar: "STRIPE_PRICE_ID_2CAT",
-    },
+    price: 7.99,
+    categoryCount: 2,
   },
   threeCategories: {
-    planKey: "threeCategories",
+    priceId: "price_1TOkY18Jf6UbCUSKaJykyfqT",
     label: "ONE THING — 3 Categories",
-    priceCents: 999,
-    interval: "month",
-    intervalCount: 1,
-    trialDays: 0,
-    stripe: {
-      productLookupKey: "one_thing_3_categories",
-      priceLookupKey: "one_thing_3_categories_monthly",
-      priceEnvVar: "STRIPE_PRICE_ID_3CAT",
-    },
+    price: 9.99,
+    categoryCount: 3,
   },
 };
 
-export function getPlanDefinition(planKey: PlanKey): PlanDefinition {
-  return PLAN_DEFINITIONS[planKey];
+export function getPlan(planKey: PlanKey): Plan {
+  return PLANS[planKey];
 }
 
-export function getStripePriceId(
-  planKey: PlanKey,
-  env: NodeJS.ProcessEnv = process.env,
-): string {
-  const definition = getPlanDefinition(planKey);
-  const value = env[definition.stripe.priceEnvVar];
+export function getPlanForCategoryCount(
+  categoryCount: number,
+): [PlanKey, Plan] | null {
+  for (const planKey of PLAN_KEYS) {
+    const plan = PLANS[planKey];
 
-  if (!value) {
-    throw new Error(
-      `Missing Stripe price id for ${planKey}: ${definition.stripe.priceEnvVar}.`,
-    );
+    if (plan.categoryCount === categoryCount) {
+      return [planKey, plan];
+    }
   }
 
-  return value;
+  return null;
 }
 
-export function resolvePlanFromStripePriceId(
-  stripePriceId: string,
-  env: NodeJS.ProcessEnv = process.env,
-): PlanKey | null {
-  for (const planKey of PLAN_KEYS) {
-    const definition = PLAN_DEFINITIONS[planKey];
+export function getStripePriceId(planKey: PlanKey): string {
+  return PLANS[planKey].priceId;
+}
 
-    if (env[definition.stripe.priceEnvVar] === stripePriceId) {
+export function resolvePlanFromStripePriceId(stripePriceId: string): PlanKey | null {
+  for (const planKey of PLAN_KEYS) {
+    if (PLANS[planKey].priceId === stripePriceId) {
       return planKey;
     }
   }
