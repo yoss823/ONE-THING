@@ -17,7 +17,7 @@ const ibmPlexSans = IBM_Plex_Sans({
 export const metadata: Metadata = {
   title: "ONE THING",
   description:
-    "A subscription product that sends one clear action per category each morning at 8:00am local time.",
+    "ONE THING sends one clear morning action for the categories you selected, plus a weekly summary and a monthly clarity check.",
 };
 
 export default function RootLayout({

@@ -1,0 +1,15 @@
+Subject: Monthly clarity check for {{month_name}}
+Preheader: Review what should continue, pause, or return this month.
+
+This replaces today's daily email.
+
+Keep
+- {{keep_prompt}}
+
+Reduce
+- {{reduce_prompt}}
+
+Resume
+- {{resume_prompt}}
+
+Update categories: {{settings_url}}

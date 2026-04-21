@@ -150,3 +150,51 @@
   - a focused CEO task list for what to do next
 - `npm ci` was required locally because `node_modules` was absent in the checkout at verification time.
 - `npm run build` passed after dependencies were restored.
+
+## Repository Findings - 2026-04-21 Landing Page And Template Content Task
+
+- `DOCS.md` was up to date enough to avoid re-discovering the earlier blueprint work and confirmed that the homepage was still presenting ONE THING as a scaffold instead of as a customer-facing product.
+- The live app surface for this task was still very small:
+  - `app/page.tsx` contained hardcoded scaffold copy
+  - `app/checkout/success/page.tsx` contained placeholder post-checkout messaging
+  - there was no reusable content directory for marketing, onboarding, confirmation, or email copy
+- `lib/billing/plans.ts` already contained the canonical three-plan pricing values, so the safest approach for pricing presentation was to render from that source instead of introducing a second pricing constant.
+- The existing design system in `app/layout.tsx` and `app/globals.css` already established the visual direction:
+  - Fraunces for display
+  - IBM Plex Sans for body
+  - warm paper / ink color palette
+- The repo did not contain exportable email template files before this task.
+
+## Changes Made - 2026-04-21 Landing Page And Template Content Task
+
+- Added a reusable content source under `content/one-thing/`:
+  - `marketing.ts`
+  - `onboarding.ts`
+  - `confirmation.ts`
+  - `emails.ts`
+- Added exportable email template files under `content/one-thing/email-templates/`:
+  - `confirmation.html`
+  - `confirmation.txt`
+  - `daily.html`
+  - `daily.txt`
+  - `weekly-summary.html`
+  - `weekly-summary.txt`
+  - `monthly-clarity-check.html`
+  - `monthly-clarity-check.txt`
+- Replaced the scaffold homepage in `app/page.tsx` with a production-style marketing page that now includes:
+  - customer-facing hero copy
+  - operational promise points
+  - a 45-second onboarding sequence
+  - preview cards for the daily, weekly, and monthly emails
+  - three-plan pricing presentation rendered from `lib/billing/plans.ts`
+  - CTA copy tied to pricing and onboarding sections
+  - FAQ and confirmation-message preview blocks
+- Replaced the placeholder success page in `app/checkout/success/page.tsx` with calmer confirmation messaging driven by the new content module.
+- Updated `app/layout.tsx` metadata description so the browser / crawler description now matches the shipped product copy.
+
+## Verification Notes - 2026-04-21 Landing Page And Template Content Task
+
+- `npm ci` was required because `node_modules` was absent in the checkout.
+- `npm run lint` passed after dependencies were installed.
+- `npm run build` passed after the landing-page and template changes.
+- Commit, push, and the required single deployment verification attempt were still pending at the time these notes were written.
