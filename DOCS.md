@@ -218,6 +218,37 @@
 ## Changes Made - 2026-04-21 First Paid Signup Audit
 
 - Added `docs/first-paid-signup-audit-2026-04-21.md`.
+
+## Repository Findings - 2026-04-21 Daily Action Email Task
+
+- `DOCS.md` was present and remains the authoritative running log for prior product, checkout, and email-planning work.
+- The repo is a Next.js App Router app with React 19 and TypeScript path aliases via `@/*`.
+- The repo already has email-adjacent support files under `lib/email/`, but it does not yet have:
+  - an `emails/` directory
+  - a concrete daily email template
+  - a Resend sending helper
+- `package.json` does not currently include the `resend` package.
+- The repo does not currently include `@react-email/components` or any other React Email setup, so the simplest repo-consistent implementation is a plain React component rendered to static HTML.
+- `.env.example` already contains both `NEXT_PUBLIC_BASE_URL=http://localhost:3000` and a `RESEND_API_KEY` placeholder, so this task likely only needs normalization rather than new env keys.
+- Existing tracking helpers in `lib/email/tracking-links.ts` target the older `/t/:token/:action` shape and use `"pause"` rather than the task-specific query-string tracking URLs and `"skip"` response requested for this email.
+
+## Changes Made - 2026-04-21 Daily Action Email Task
+
+- Added `emails/DailyActionEmail.tsx` with:
+  - the `DailyActionEmailProps` type requested by the task
+  - a plain React-rendered HTML email with a plain-text feel, 480px max width, white background, dark text, serif action copy, and text links for `✅ Done` and `⏸ Skip for today`
+  - per-category tracking URLs in the requested `/api/track?userId=...&actionId=...&response=done|skip` shape
+  - footer links for `/unsubscribe` and `/account`
+  - `generateDailyActionHtml` and `generateDailyActionText` helpers for outbound sending
+- Added `lib/email/sendDailyAction.ts` with a Resend-backed `sendDailyActionEmail(params)` helper that sends the subject `Your one thing for ${params.date}` and includes both HTML and text versions of the email.
+- Added the `resend` dependency to `package.json` and the generated lockfile state via `npm install resend`.
+- Updated `.env.example` to normalize `RESEND_API_KEY=re_...` while keeping the already-present `NEXT_PUBLIC_BASE_URL=http://localhost:3000`.
+
+## Verification Notes - 2026-04-21 Daily Action Email Task
+
+- `npm install resend` completed successfully.
+- `npm run lint` passed after the email template and sender changes.
+- `npm run build` passed after the email template and sender changes.
 - The audit memo documents:
   - current shipped app state
   - the major gaps blocking revenue
