@@ -1,5 +1,47 @@
 # DOCS
 
+## Repository Findings - 2026-04-21 Stripe Webhook Task
+
+- `DOCS.md` was present and remains the required first stop before re-exploring the repo.
+- The repo already contained `app/api/webhooks/stripe/route.ts`, but it was still a scaffold that only echoed payload size and did not verify signatures or touch the database.
+- The Prisma schema does not store subscription state directly on `User`:
+  - Stripe identifiers, plan, and status live in the `Subscription` model
+  - category selection, energy level, and available minutes live in the `UserPreference` model
+- The current onboarding checkout flow writes these values into Stripe metadata:
+  - `categories` as a JSON string of display labels
+  - `energyLevel` as `"low"`, `"medium"`, or `"high"`
+  - `availableMinutes` as a stringified number
+- The repo did not yet contain a shared Prisma client helper under `lib/db.ts`, so the webhook route needed that support file before it could persist Stripe events.
+- The current Prisma schema has no persisted timezone field for users, so the requested default `"UTC"` timezone cannot be stored yet without a schema change. The webhook implementation must therefore omit timezone persistence and keep the current schema unchanged.
+
+## Changes Made - 2026-04-21 Stripe Webhook Task
+
+- Added `lib/db.ts` with the standard shared Prisma client singleton for Next.js server routes.
+- Replaced the Stripe webhook scaffold in `app/api/webhooks/stripe/route.ts` with a real Node runtime webhook handler that:
+  - reads the raw request body with `request.text()`
+  - verifies the `stripe-signature` header against `STRIPE_WEBHOOK_SECRET`
+  - handles `checkout.session.completed`
+  - handles `customer.subscription.updated`
+  - handles `customer.subscription.deleted`
+- Implemented checkout completion persistence against the existing Prisma schema by:
+  - upserting `User` by email
+  - upserting the related `Subscription` record with Stripe ids, derived `tier_1` / `tier_2` / `tier_3` plan, and active status
+  - upserting the related `UserPreference` record with enum-mapped categories, numeric energy level, and available minutes
+- Added metadata normalization helpers in the webhook route so current checkout payloads are accepted without changing the onboarding flow:
+  - category display labels are mapped into `ActionCategory` enum values
+  - `low` / `medium` / `high` energy values are mapped into `1` / `2` / `3`
+- Implemented subscription lifecycle updates against the `Subscription` table:
+  - `customer.subscription.updated` syncs status and the Stripe subscription id
+  - `customer.subscription.deleted` marks the subscription as `canceled`
+
+## Verification Notes - 2026-04-21 Stripe Webhook Task
+
+- `npm ci` completed successfully.
+- `npm run db:generate` initially failed because the Prisma schema requires `DIRECT_URL` to exist during local code generation.
+- Reran Prisma generation successfully with temporary dummy `DATABASE_URL` and `DIRECT_URL` values because no live database connection is needed for client generation.
+- `npm run lint` passed after the webhook changes.
+- `npm run build` passed after adjusting the Stripe constructor config typing to keep the webhook pinned to API version `2023-10-16`.
+
 ## Repository Findings - 2026-04-21 Stripe Checkout Wiring Task
 
 - `DOCS.md` was present and materially reduced rediscovery work for this task.
