@@ -1,16 +1,27 @@
-export type TrackingAction = "done" | "pause";
+export type TrackingResponse = "done" | "skip";
 
 export function buildTrackingPath(
-  token: string,
-  action: TrackingAction,
+  userId: string,
+  actionId: string,
+  response: TrackingResponse,
 ): string {
-  return `/t/${token}/${action}`;
+  const params = new URLSearchParams({
+    userId,
+    actionId,
+    response,
+  });
+
+  return `/api/track?${params.toString()}`;
 }
 
 export function buildTrackingUrl(
   appUrl: string,
-  token: string,
-  action: TrackingAction,
+  userId: string,
+  actionId: string,
+  response: TrackingResponse,
 ): string {
-  return new URL(buildTrackingPath(token, action), appUrl).toString();
+  return new URL(
+    buildTrackingPath(userId, actionId, response),
+    appUrl,
+  ).toString();
 }

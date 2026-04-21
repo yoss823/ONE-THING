@@ -1,5 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { buildTrackingUrl } from "@/lib/email/tracking-links";
+
 export type DailyActionEmailProps = {
   userEmail: string;
   categories: Array<{
@@ -16,21 +18,6 @@ type EmailLinkSet = {
   doneUrl: string;
   skipUrl: string;
 };
-
-function buildTrackingUrl(
-  trackingBaseUrl: string,
-  userId: string,
-  actionId: string,
-  response: "done" | "skip",
-): string {
-  const url = new URL("/api/track", trackingBaseUrl);
-
-  url.searchParams.set("userId", userId);
-  url.searchParams.set("actionId", actionId);
-  url.searchParams.set("response", response);
-
-  return url.toString();
-}
 
 function buildAccountUrl(trackingBaseUrl: string, pathname: string): string {
   return new URL(pathname, trackingBaseUrl).toString();

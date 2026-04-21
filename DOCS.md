@@ -1,5 +1,59 @@
 # DOCS
 
+## Repository Findings - 2026-04-21 Email Response Tracking Task
+
+- `DOCS.md` was present and remains the required first read before exploring the repo again.
+- The Prisma schema already contains a schema-equivalent logging model for this task:
+  - `UserEvent`
+  - `userId`
+  - optional `actionId`
+  - `eventType` enum with `CLICKED_YES` and `CLICKED_PAUSE`
+  - `createdAt`
+- The repo does not currently contain either surface requested by the task:
+  - `app/api/track/route.ts`
+  - `app/tracked/page.tsx`
+- `emails/DailyActionEmail.tsx` already generates the requested email link shape:
+  - `/api/track?userId=...&actionId=...&response=done|skip`
+- `app/welcome/page.tsx` is the closest styling reference for the requested confirmation page:
+  - white page background
+  - centered card
+  - calm typography
+  - warm neutral border and surface colors
+- `lib/email/tracking-links.ts` still reflects an older tokenized `/t/:token/:action` design and uses `"pause"` instead of the task-specific `"skip"` response.
+
+## Changes Made - 2026-04-21 Email Response Tracking Task
+
+- Added `app/api/track/route.ts` as the email-safe GET tracking endpoint.
+- The new tracking route:
+  - validates `userId`, `actionId`, and `response`
+  - silently redirects invalid requests to `/`
+  - confirms the target `User` exists
+  - confirms the target `Action` exists so the insert does not fail on the foreign key
+  - records the click in the existing Prisma `UserEvent` model rather than introducing a second logging table
+  - maps `response=done` to `UserEventType.CLICKED_YES`
+  - maps `response=skip` to `UserEventType.CLICKED_PAUSE`
+  - writes `createdAt: new Date()`
+  - redirects successful clicks to `/tracked?response=done|skip`
+- Added `app/tracked/page.tsx` as the minimal end-state confirmation surface.
+- The tracked page matches the repo’s existing welcome styling direction:
+  - white background
+  - centered warm-neutral card
+  - no links or extra CTA
+  - response-specific copy for `done` and `skip`
+- Updated `lib/email/tracking-links.ts` to the shipped query-string contract:
+  - `/api/track?userId=...&actionId=...&response=done|skip`
+  - `TrackingResponse = "done" | "skip"`
+- Updated `emails/DailyActionEmail.tsx` to reuse the shared tracking-link helper so the outbound email links stay aligned with the live endpoint.
+- No Prisma schema change or migration was needed for this task because the checked-in `UserEvent` model already serves as the schema-equivalent action response log.
+
+## Verification Notes - 2026-04-21 Email Response Tracking Task
+
+- `npm run lint` initially failed because the checkout had no local `node_modules`; restored dependencies with `npm ci`.
+- `npm run build` initially failed because the local Prisma client had not been generated and only exposed the fallback stub types.
+- Regenerated the Prisma client successfully with `DIRECT_URL="$DATABASE_URL" npx prisma generate`.
+- `npm run lint` passed after dependency restore.
+- `npm run build` passed after Prisma client generation.
+
 ## Repository Findings - 2026-04-21 Stripe Webhook Task
 
 - `DOCS.md` was present and remains the required first stop before re-exploring the repo.
