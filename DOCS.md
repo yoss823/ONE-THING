@@ -637,3 +637,8 @@
 - Regenerated the Prisma client successfully with `DIRECT_URL="${DIRECT_URL:-$DATABASE_URL}" npm run db:generate`.
 - `npm run lint` passed after dependency restore.
 - `npm run build` passed after Prisma client regeneration.
+- The welcome page changes were committed as `aa91ecf` (`feat: /welcome page post-checkout confirmation`) and pushed to `origin/main`.
+- After the required 90-second wait, one deployment verification attempt was made with `agent-browser open https://onestep.nanocorp.app`.
+- That verification attempt failed locally before opening the site because `agent-browser` does not currently have a Chrome binary available in this environment:
+  - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
+- No second deployment verification attempt was made.
