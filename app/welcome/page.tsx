@@ -1,86 +1,163 @@
-"use client"
+import Link from "next/link";
+import Stripe from "stripe";
 
-import { useState } from "react"
+type WelcomePageProps = {
+  searchParams: Promise<{
+    session_id?: string | string[];
+  }>;
+};
 
-type OnboardingState = {
-  categories: string[]
-  energy: string
-  minutes: string
+type WelcomeDetails = {
+  customerEmail: string;
+  categories: string[];
+  energyLevel: string;
+  availableMinutes: string;
+};
+
+const ERROR_MESSAGE = "Something went wrong. Please contact support.";
+
+function getStripeClient(): Stripe {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+
+  if (!secretKey) {
+    throw new Error("STRIPE_SECRET_KEY is not configured.");
+  }
+
+  return new Stripe(secretKey);
 }
 
-function readOnboardingState(): OnboardingState {
-  if (typeof window === "undefined") {
-    return {
-      categories: [],
-      energy: "",
-      minutes: "",
-    }
+function readSingleParam(value: string | string[] | undefined): string | null {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
   }
+
+  if (Array.isArray(value) && typeof value[0] === "string" && value[0].trim()) {
+    return value[0].trim();
+  }
+
+  return null;
+}
+
+function parseCategories(rawCategories: string | null | undefined): string[] {
+  if (!rawCategories) {
+    throw new Error("Checkout session is missing metadata.categories.");
+  }
+
+  let parsed: unknown;
 
   try {
-    const raw = localStorage.getItem("onboarding")
-
-    if (!raw) {
-      return {
-        categories: [],
-        energy: "",
-        minutes: "",
-      }
-    }
-
-    const data = JSON.parse(raw)
-
-    return {
-      categories: Array.isArray(data.categories) ? data.categories : [],
-      energy: typeof data.energyLevel === "string" ? data.energyLevel : "",
-      minutes:
-        data.availableMinutes === undefined ? "" : String(data.availableMinutes),
-    }
+    parsed = JSON.parse(rawCategories) as unknown;
   } catch {
-    return {
-      categories: [],
-      energy: "",
-      minutes: "",
-    }
+    throw new Error("Checkout session metadata.categories is invalid JSON.");
   }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error("Checkout session metadata.categories is not an array.");
+  }
+
+  const categories = parsed
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (categories.length === 0) {
+    throw new Error("Checkout session metadata.categories is empty.");
+  }
+
+  return categories;
 }
 
-export default function WelcomePage() {
-  const [{ categories, energy, minutes }] = useState(readOnboardingState)
+async function getWelcomeDetails(sessionId: string): Promise<WelcomeDetails> {
+  const stripe = getStripeClient();
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
 
+  const customerEmail =
+    session.customer_email?.trim() ?? session.customer_details?.email?.trim();
+  const categories = parseCategories(session.metadata?.categories);
+  const energyLevel = session.metadata?.energyLevel?.trim();
+  const availableMinutes = session.metadata?.availableMinutes?.trim();
+
+  if (!customerEmail || !energyLevel || !availableMinutes) {
+    throw new Error("Checkout session is missing confirmation details.");
+  }
+
+  return {
+    customerEmail,
+    categories,
+    energyLevel,
+    availableMinutes,
+  };
+}
+
+function ErrorState() {
   return (
-    <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fff", padding: "2rem" }}>
-      <div style={{ maxWidth: 480, width: "100%" }}>
-        <h1 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: "1.5rem" }}>You&apos;re in.</h1>
-        <p style={{ color: "#444", marginBottom: "1rem", lineHeight: 1.7 }}>
-          Your first email arrives tomorrow at 8:00 AM.<br />
-          One thing. That&apos;s it.
-        </p>
-        <p style={{ color: "#444", marginBottom: "2rem", lineHeight: 1.7 }}>
-          We&apos;ll track what you complete and quietly adjust over time.<br />
-          No login needed. Just open the email.
-        </p>
-        {categories.length > 0 && (
-          <div style={{ borderTop: "1px solid #eee", paddingTop: "1.5rem", marginBottom: "1.5rem" }}>
-            <p style={{ color: "#555", marginBottom: "0.5rem" }}>
-              <strong>Your categories:</strong> {categories.join(", ")}
-            </p>
-            {energy && (
-              <p style={{ color: "#555", marginBottom: "0.5rem" }}>
-                <strong>Energy level:</strong> {energy}
-              </p>
-            )}
-            {minutes && (
-              <p style={{ color: "#555" }}>
-                <strong>Time available:</strong> {minutes} minutes
-              </p>
-            )}
-          </div>
-        )}
-        <p style={{ fontSize: "0.85rem", color: "#999", marginTop: "2rem" }}>
-          <a href="/account" style={{ color: "#999" }}>Manage your subscription →</a>
-        </p>
+    <main className="flex min-h-screen items-center justify-center bg-white px-6 py-16">
+      <div className="w-full max-w-[30rem]">
+        <div className="rounded-[2rem] border border-[rgba(16,34,23,0.1)] bg-white p-8 sm:p-10">
+          <p className="text-base leading-8 text-[var(--foreground-soft)]">{ERROR_MESSAGE}</p>
+        </div>
       </div>
     </main>
-  )
+  );
+}
+
+export const runtime = "nodejs";
+
+export default async function WelcomePage({ searchParams }: WelcomePageProps) {
+  const params = await searchParams;
+  const sessionId = readSingleParam(params.session_id);
+
+  if (!sessionId) {
+    return <ErrorState />;
+  }
+
+  const welcomeDetails = await getWelcomeDetails(sessionId).catch((error) => {
+    console.error("Failed to render welcome page.", error);
+    return null;
+  });
+
+  if (!welcomeDetails) {
+    return <ErrorState />;
+  }
+
+  const { customerEmail, categories, energyLevel, availableMinutes } =
+    welcomeDetails;
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-white px-6 py-16">
+      <div className="w-full max-w-[30rem]">
+        <section className="rounded-[2rem] border border-[rgba(16,34,23,0.1)] bg-white p-8 sm:p-10">
+          <h1
+            className="font-[var(--font-display)] text-4xl leading-none text-[var(--foreground)] sm:text-5xl"
+            style={{ letterSpacing: "-0.03em" }}
+          >
+            You&apos;re in.
+          </h1>
+
+          <p className="mt-6 whitespace-pre-line text-base leading-8 text-[var(--foreground-soft)]">
+            {"Your first email arrives tomorrow at 8:00 AM.\nOne thing. That's it.\n\nWe'll track what you complete and quietly adjust over time.\nNo login needed. Just open the email."}
+          </p>
+
+          <div className="mt-10 rounded-[1.5rem] border border-[rgba(16,34,23,0.08)] bg-[rgba(255,249,240,0.52)] px-5 py-5 text-sm leading-7 text-[var(--foreground-soft)] sm:px-6">
+            <p>Your categories: {categories.join(", ")}</p>
+            <p>Energy level: {energyLevel}</p>
+            <p>Time available: {availableMinutes} minutes</p>
+          </div>
+
+          <p className="mt-6 text-sm leading-7 text-[var(--foreground-soft)]">
+            Confirmation sent to: {customerEmail}
+          </p>
+
+          <p className="mt-10 text-sm text-[rgba(16,34,23,0.58)]">
+            <Link
+              href="/account"
+              className="transition-colors hover:text-[var(--foreground)]"
+            >
+              Manage your subscription →
+            </Link>
+          </p>
+        </section>
+      </div>
+    </main>
+  );
 }

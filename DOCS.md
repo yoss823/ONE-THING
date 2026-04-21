@@ -261,6 +261,48 @@
 - Updated `tsconfig.json` to exclude `prisma/seed.ts` from Next.js TS build (pre-existing type error was causing build failure)
 - Build passes; committed and pushed to `main`.
 
+## Repository Findings - 2026-04-21 Welcome Confirmation Task
+
+- `DOCS.md` was present and remained the required first stop before editing.
+- The repo already had `app/welcome/page.tsx`, but it was a legacy client component that:
+  - read onboarding data from `localStorage`
+  - did not read `session_id`
+  - did not fetch Stripe server-side
+  - used inline styles instead of the project’s current Tailwind-based warm minimal system
+- `app/api/checkout/route.ts` already sends Stripe success redirects to `/welcome?session_id={CHECKOUT_SESSION_ID}`, so the route contract for this task was already wired and only the page implementation needed replacement.
+- The current app shell already provides the project font variables and brand tokens:
+  - `app/layout.tsx` defines `--font-display` and `--font-body`
+  - `app/globals.css` defines the warm neutral palette used by the rest of the site
+- `app/welcome/layout.tsx` is a simple Suspense wrapper and did not need structural changes for this task.
+- There is no checked-in `app/account/page.tsx` route yet, so the requested `/account` link can be rendered now but still depends on a future account-management surface.
+
+## Changes Made - 2026-04-21 Welcome Confirmation Task
+
+- Replaced the legacy client-side `app/welcome/page.tsx` implementation with a Node runtime server component.
+- The new `/welcome` page now:
+  - reads `session_id` from `searchParams`
+  - retrieves the Stripe Checkout Session at render time with `stripe.checkout.sessions.retrieve`
+  - uses `process.env.STRIPE_SECRET_KEY` for Stripe initialization, matching the rest of the codebase
+  - extracts `customer_email`, `metadata.categories`, `metadata.energyLevel`, and `metadata.availableMinutes`
+  - parses `metadata.categories` from JSON and renders the values as a comma-separated list
+  - renders the exact requested confirmation copy and the `/account` management link
+  - falls back to the exact support message when `session_id` is missing or Stripe/session metadata is invalid
+- Kept the page visually aligned with the current ONE THING brand direction:
+  - white background
+  - centered max-width content
+  - generous spacing
+  - Tailwind-only styling
+  - existing display/body font variables from the app shell
+
+## Verification Notes - 2026-04-21 Welcome Confirmation Task
+
+- `npm run lint` initially failed because the checkout did not have local dependencies installed; restored them with `npm ci`.
+- `npm run lint` then failed on the new React lint rule that disallows JSX construction inside `try/catch`; refactored the page to fetch Stripe data before rendering JSX.
+- `npm run lint` passed after that refactor.
+- `npm run build` initially failed because the local Prisma client was stale and missing generated enum exports used elsewhere in the app.
+- Regenerated the Prisma client successfully with `npm run db:generate` while supplying fallback `DATABASE_URL` / `DIRECT_URL` values only if the environment variables were absent.
+- `npm run build` passed after Prisma client regeneration.
+
 ## Repository Findings
 
 - The repo already contained a deployable Next.js App Router baseline with a landing page, a checkout success page, and placeholder webhook / cron routes.
