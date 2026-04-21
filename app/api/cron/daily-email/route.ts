@@ -81,11 +81,16 @@ function hasSentLocalToday(user: DailyEmailUser, now: Date): boolean {
 
   const localDateKey = getLocalDateKey(now, user.timezone);
 
-  return user.dailySends.some(
-    (send) =>
+  for (const send of user.dailySends) {
+    if (
       send.status === "sent" &&
-      getLocalDateKey(send.sentAt, user.timezone!) === localDateKey,
-  );
+      getLocalDateKey(send.sentAt, user.timezone) === localDateKey
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function logDelivery(
