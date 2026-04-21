@@ -118,6 +118,7 @@
 - Updated the existing Resend send helpers to lazily create the client so Next.js builds succeed even when `RESEND_API_KEY` is absent at build time.
 - Fixed the pre-existing `app/welcome/page.tsx` lint failure by replacing the synchronous state-setting effect with a lazy client-side initializer.
 - Updated the daily email sender module path from `lib/email/sendDailyAction.ts` to `lib/email/sendDailyAction.tsx` because the Resend `react:` payload now renders the email component directly.
+- After rebasing onto a newer `origin/main`, added the missing `@react-email/components` and `@react-email/render` dependencies because the newly introduced weekly email route on `main` already imported them and otherwise broke `npm run build`.
 
 ## Verification Notes - 2026-04-21 Monthly Clarity Email Task
 
@@ -141,6 +142,7 @@
 - `npm run build` passed after:
   - switching email sends from `react-dom/server` rendering to Resend’s `react:` payload
   - lazily constructing the Resend client to avoid build-time env failures
+  - installing the missing React Email packages required by the rebased weekly email route
 
 ## Repository Findings - 2026-04-21 Stripe Webhook Task
 
