@@ -302,6 +302,11 @@
 - `npm run build` initially failed because the local Prisma client was stale and missing generated enum exports used elsewhere in the app.
 - Regenerated the Prisma client successfully with `npm run db:generate` while supplying fallback `DATABASE_URL` / `DIRECT_URL` values only if the environment variables were absent.
 - `npm run build` passed after Prisma client regeneration.
+- The `/welcome` changes were committed as `037801e` (`feat: /welcome page post-checkout confirmation`) and pushed to `origin/main`.
+- After the required 90-second post-push wait, one deployment verification attempt was made with `agent-browser`.
+- That single deployment verification attempt failed before page navigation because Chrome is not installed for `agent-browser` in the current environment:
+  - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
+- No second deployment verification attempt was made.
 
 ## Repository Findings
 
