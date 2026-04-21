@@ -1,4 +1,8 @@
-export const PLAN_KEYS = ["monthly", "quarterly", "annual"] as const;
+export const PLAN_KEYS = [
+  "oneCategory",
+  "twoCategories",
+  "threeCategories",
+] as const;
 
 export type PlanKey = (typeof PLAN_KEYS)[number];
 
@@ -6,57 +10,57 @@ type PlanDefinition = {
   planKey: PlanKey;
   label: string;
   priceCents: number;
-  interval: "month" | "year";
-  intervalCount: 1 | 3 | 12;
-  trialDays: number;
+  interval: "month";
+  intervalCount: 1;
+  trialDays: 0;
   stripe: {
-    productLookupKey: "one_thing_membership";
+    productLookupKey: string;
     priceLookupKey: string;
     priceEnvVar:
-      | "STRIPE_PRICE_MONTHLY"
-      | "STRIPE_PRICE_QUARTERLY"
-      | "STRIPE_PRICE_ANNUAL";
+      | "STRIPE_PRICE_ID_1CAT"
+      | "STRIPE_PRICE_ID_2CAT"
+      | "STRIPE_PRICE_ID_3CAT";
   };
 };
 
 export const PLAN_DEFINITIONS: Record<PlanKey, PlanDefinition> = {
-  monthly: {
-    planKey: "monthly",
-    label: "Monthly",
-    priceCents: 1200,
+  oneCategory: {
+    planKey: "oneCategory",
+    label: "ONE THING — 1 Category",
+    priceCents: 499,
     interval: "month",
     intervalCount: 1,
-    trialDays: 7,
+    trialDays: 0,
     stripe: {
-      productLookupKey: "one_thing_membership",
-      priceLookupKey: "one_thing_monthly",
-      priceEnvVar: "STRIPE_PRICE_MONTHLY",
+      productLookupKey: "one_thing_1_category",
+      priceLookupKey: "one_thing_1_category_monthly",
+      priceEnvVar: "STRIPE_PRICE_ID_1CAT",
     },
   },
-  quarterly: {
-    planKey: "quarterly",
-    label: "Quarterly",
-    priceCents: 3000,
+  twoCategories: {
+    planKey: "twoCategories",
+    label: "ONE THING — 2 Categories",
+    priceCents: 799,
     interval: "month",
-    intervalCount: 3,
-    trialDays: 7,
+    intervalCount: 1,
+    trialDays: 0,
     stripe: {
-      productLookupKey: "one_thing_membership",
-      priceLookupKey: "one_thing_quarterly",
-      priceEnvVar: "STRIPE_PRICE_QUARTERLY",
+      productLookupKey: "one_thing_2_categories",
+      priceLookupKey: "one_thing_2_categories_monthly",
+      priceEnvVar: "STRIPE_PRICE_ID_2CAT",
     },
   },
-  annual: {
-    planKey: "annual",
-    label: "Annual",
-    priceCents: 9600,
-    interval: "year",
-    intervalCount: 12,
-    trialDays: 7,
+  threeCategories: {
+    planKey: "threeCategories",
+    label: "ONE THING — 3 Categories",
+    priceCents: 999,
+    interval: "month",
+    intervalCount: 1,
+    trialDays: 0,
     stripe: {
-      productLookupKey: "one_thing_membership",
-      priceLookupKey: "one_thing_annual",
-      priceEnvVar: "STRIPE_PRICE_ANNUAL",
+      productLookupKey: "one_thing_3_categories",
+      priceLookupKey: "one_thing_3_categories_monthly",
+      priceEnvVar: "STRIPE_PRICE_ID_3CAT",
     },
   },
 };

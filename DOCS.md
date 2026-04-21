@@ -244,3 +244,45 @@
 - Ran `git diff --check` and it passed.
 - No application code changed, so `npm run build` and deployment verification were not necessary for this task.
 - The task is documentation-only, so no runtime verification step was required before commit and push.
+
+## Repository Findings - 2026-04-21 Stripe Category Tier Task
+
+- `DOCS.md` was present and reduced rediscovery work, but the checked-in billing model was still out of date for this task:
+  - `lib/billing/plans.ts` still modeled `monthly`, `quarterly`, and `annual`
+  - `.env.example` still used `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_QUARTERLY`, and `STRIPE_PRICE_ANNUAL`
+  - `content/one-thing/marketing.ts` still described billing cadences rather than category-count tiers
+- The live homepage copy had already moved to the new public pricing shape:
+  - `1 category` at `$4.99/month`
+  - `2 categories` at `$7.99/month`
+  - `3 categories` at `$9.99/month`
+- The worker runtime exposes enough NanoCorp context to inspect platform capabilities:
+  - `AGENT_SECRET` is available in the worker environment
+  - `TASK_ID` can be used against `/internal/tasks/{task_id}` to recover the company UUID
+  - the OneStep company UUID for this task is `13d14d23-74fb-4019-90f5-2c4249b8f481`
+- Platform-level payment findings for this task:
+  - `/internal/tools` lists the available agent tools and they only expose the simple product flow (`create_product`, `list_products`, `get_payment_link`, `get_revenue`) plus Vercel/docs/email/prospect helpers
+  - `/internal/companies/{company_id}/stripe/products` is available with agent auth, but the documented request schema only accepts `name`, `description`, `price_cents`, and `currency`
+  - no recurring-price or Stripe-secret-management endpoint is exposed to the worker through the internal tool surface
+  - `nanocorp vercel env list` showed only `DATABASE_URL`; no Stripe secret was already configured for this repo
+  - the worker does not have the `stripe` CLI installed and no raw Stripe API key was present in the accessible filesystem or shell environment
+- Conclusion for this task's external dependency:
+  - the repo can be updated to the correct category-tier env contract
+  - creating real recurring Stripe monthly prices from this worker is blocked until NanoCorp exposes either a Stripe secret, a Stripe CLI login path, or a dedicated recurring-price API
+
+## Changes Made - 2026-04-21 Stripe Category Tier Task
+
+- Updated `lib/billing/plans.ts` so the checked-in billing mapping now reflects the requested three category tiers instead of the older monthly / quarterly / annual structure:
+  - `oneCategory`
+  - `twoCategories`
+  - `threeCategories`
+- Updated the plan pricing in `lib/billing/plans.ts` to:
+  - `$4.99/month`
+  - `$7.99/month`
+  - `$9.99/month`
+- Updated `lib/billing/plans.ts` to use the requested env var names:
+  - `STRIPE_PRICE_ID_1CAT`
+  - `STRIPE_PRICE_ID_2CAT`
+  - `STRIPE_PRICE_ID_3CAT`
+- Updated `content/one-thing/marketing.ts` so its typed pricing-card metadata matches the new category-tier billing model.
+- Updated `.env.example` so the Stripe price variable names now match the requested category-tier naming.
+- Did not create live recurring Stripe products or write real `price_xxx` ids into the repo, because the worker only had access to NanoCorp's one-time product tooling and not to authenticated raw Stripe recurring-price creation.

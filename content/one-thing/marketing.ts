@@ -43,10 +43,10 @@ export const landingPageContent = {
   },
   pricing: {
     eyebrow: "Pricing",
-    title: "One product. Three billing cadences.",
+    title: "Three category tiers. One monthly cadence.",
     body:
-      "All plans include the same product: up to three categories, daily delivery, the Monday summary, and the monthly clarity check. The only difference is billing interval.",
-    footnote: "Each plan includes a 7-day free trial.",
+      "Choose how many categories you want ONE THING to cover. Every tier bills monthly and includes the daily email, Monday summary, and monthly clarity check.",
+    footnote: "Upgrade when you want more coverage. Keep the daily routine the same.",
   },
   faq: [
     {
@@ -62,7 +62,7 @@ export const landingPageContent = {
     {
       question: "Is there a free plan?",
       answer:
-        "No. The product is paid, with a 7-day free trial on every billing option.",
+        "No. The product is paid, with monthly billing based on how many categories you choose.",
     },
   ],
 } as const;
@@ -78,26 +78,26 @@ export const pricingCardCopy: Record<
     featured?: boolean;
   }
 > = {
-  monthly: {
-    label: "Month to month",
-    billingNote: "Best if you want the shortest commitment.",
-    comparisonNote: "No discount. Full flexibility.",
-    ctaLabel: "Choose monthly in onboarding",
+  oneCategory: {
+    label: "1 category",
+    billingNote: "The narrowest starting point.",
+    comparisonNote: "Best if one area needs consistent attention first.",
+    ctaLabel: "Choose 1 category in onboarding",
     href: "#onboarding",
   },
-  quarterly: {
-    label: "Quarterly",
-    billingNote: "A practical default for testing the routine.",
-    comparisonNote: "Lower effective monthly cost than monthly billing.",
-    ctaLabel: "Choose quarterly in onboarding",
+  twoCategories: {
+    label: "2 categories",
+    billingNote: "A balanced default for people juggling two fronts.",
+    comparisonNote: "Covers more of your day without turning into a full checklist.",
+    ctaLabel: "Choose 2 categories in onboarding",
     href: "#onboarding",
     featured: true,
   },
-  annual: {
-    label: "Annual",
-    billingNote: "Lowest effective monthly cost.",
-    comparisonNote: "Best fit if you already know you want the system to stay in place.",
-    ctaLabel: "Choose annual in onboarding",
+  threeCategories: {
+    label: "3 categories",
+    billingNote: "The fullest version of the product.",
+    comparisonNote: "Best if you want the routine to cover work, life, and one personal track together.",
+    ctaLabel: "Choose 3 categories in onboarding",
     href: "#onboarding",
   },
 };
