@@ -99,3 +99,8 @@
   - short practical reasons
   - non-repetitive physical and digital organization tasks
 - Validated the new file with `jq`, including JSON parsing and a final action count of 30.
+- `npm ci` was required locally before verification because the checkout did not have `node_modules`, and `npm run build` passed after installing dependencies.
+- The content changes were committed and pushed to `main`.
+- Deployment verification was attempted once after the required 90-second wait, but `agent-browser` could not open the site because Chrome was not installed locally:
+  - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
+  - No second verification attempt was made.
