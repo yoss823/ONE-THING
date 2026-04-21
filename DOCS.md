@@ -419,6 +419,69 @@
   - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
 - No second deployment verification attempt was made.
 
+## Repository Findings - 2026-04-21 Weekly Summary Email Task
+
+- `DOCS.md` was present and read first before any new exploration.
+- The current outbound email implementation is split between:
+  - `emails/DailyActionEmail.tsx` for HTML/text generation
+  - `lib/email/sendDailyAction.ts` for the Resend send call
+- The checked-in daily email does not yet use React Email primitives, so the weekly email can introduce that stack without rewriting the existing daily template.
+- The cron routes in the repo are still minimal authenticated scaffolds:
+  - `app/api/cron/send-daily/route.ts`
+  - `app/api/cron/process-send-queue/route.ts`
+- The live database and Prisma schema contain `daily_sends` and `user_events`, but there is no `DailyDeliveryLog` model or table. Weekly recap logic therefore needs to compute its 7-day summary from `daily_sends` plus `user_events`.
+- The live database and checked-in Prisma schema still do not contain a persisted user timezone column.
+- Because timezone storage is missing, the weekly cron implementation must use a safe UTC fallback while remaining easy to upgrade once `users.timezone` exists.
+- The repo did not contain `vercel.json` before this task, so adding the weekly cron requires creating that file and preserving room for future cron entries.
+
+## Changes Made - 2026-04-21 Weekly Summary Email Task
+
+- Added `emails/WeeklySummaryEmail.tsx` as the new weekly recap email template.
+- The weekly email now uses React Email primitives from `@react-email/components` and `@react-email/render`.
+- The new weekly template ships:
+  - bold `Your week.` header
+  - stats row for completed, skipped, and streak counts
+  - one recap row per day with a status icon
+  - closing line `Keep going. One thing at a time.`
+  - plain unsubscribe link footer
+- Added `app/api/cron/weekly-email/route.ts` as the authenticated Monday recap cron endpoint.
+- The weekly cron route now:
+  - reuses the same `Authorization: Bearer $CRON_SECRET` gate as the existing cron routes
+  - filters active subscribed users
+  - checks whether each user is currently within Monday `8:00 AM ±10 minutes` in their local timezone
+  - falls back to `UTC` because the current schema still has no persisted timezone column
+  - detects a future `users.timezone` column dynamically so the route can start using it without a rewrite
+  - summarizes the previous 7 local calendar days from `daily_sends` plus `user_events`
+  - computes `completedCount`, `skippedCount`, and a trailing completed-day streak
+  - renders the weekly email and sends it through Resend
+  - writes a `user_events` `SENT` marker with `action_id = null` after a successful weekly send to avoid duplicate Monday sends during the cron window
+- Created `vercel.json` with the requested `*/10 * * * *` schedule for `/api/cron/weekly-email`.
+- Added the required React Email packages to `package.json` and `package-lock.json`:
+  - `@react-email/components`
+  - `@react-email/render`
+- Applied one small unrelated repo-health fix in `app/welcome/page.tsx` so the existing lint configuration passes:
+  - removed the unused `session_id` variable
+  - deferred onboarding state hydration into `requestAnimationFrame` to satisfy the current React hooks lint rule
+
+## Verification Notes - 2026-04-21 Weekly Summary Email Task
+
+- `npm install @react-email/components` completed successfully.
+- `npm install @react-email/render` completed successfully.
+- `npm run db:generate` initially failed because `DIRECT_URL` was not present in the local shell environment.
+- Regenerated the Prisma client successfully with `DIRECT_URL="$DATABASE_URL" npm run db:generate`.
+- `npm run lint` initially failed on a pre-existing issue in `app/welcome/page.tsx`; after the small hydration cleanup above, `npm run lint` passed.
+- `npm run build` initially failed because:
+  - `emails/WeeklySummaryEmail.tsx` imported `react-dom/server` directly
+  - the local Prisma client was still using the fallback stub types
+  - the weekly route instantiated `Resend` at module load, which breaks local builds without `RESEND_API_KEY`
+- Resolved the build failures by:
+  - switching weekly rendering to `@react-email/render`
+  - regenerating the Prisma client
+  - moving the Resend client construction inside the route handler
+- Final verification passed:
+  - `npm run lint`
+  - `npm run build`
+
 ## Repository Findings - 2026-04-21 Social Media Setup Task
 
 - `DOCS.md` was present and materially reduced rediscovery work for this task.

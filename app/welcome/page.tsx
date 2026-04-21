@@ -5,21 +5,27 @@ import { useEffect, useState } from "react"
 
 export default function WelcomePage() {
   const params = useSearchParams()
-  const sessionId = params.get("session_id") ?? ""
+  params.get("session_id")
   const [categories, setCategories] = useState<string[]>([])
   const [energy, setEnergy] = useState("")
   const [minutes, setMinutes] = useState("")
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("onboarding")
-      if (raw) {
-        const data = JSON.parse(raw)
-        if (Array.isArray(data.categories)) setCategories(data.categories)
-        if (data.energyLevel) setEnergy(data.energyLevel)
-        if (data.availableMinutes) setMinutes(String(data.availableMinutes))
-      }
-    } catch {}
+    const frame = window.requestAnimationFrame(() => {
+      try {
+        const raw = localStorage.getItem("onboarding")
+        if (raw) {
+          const data = JSON.parse(raw)
+          if (Array.isArray(data.categories)) setCategories(data.categories)
+          if (data.energyLevel) setEnergy(data.energyLevel)
+          if (data.availableMinutes) setMinutes(String(data.availableMinutes))
+        }
+      } catch {}
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+    }
   }, [])
 
   return (
