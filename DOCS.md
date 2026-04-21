@@ -104,3 +104,49 @@
 - Deployment verification was attempted once after the required 90-second wait, but `agent-browser` could not open the site because Chrome was not installed locally:
   - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
   - No second verification attempt was made.
+
+## Repository Findings - 2026-04-21 First Paid Signup Audit
+
+- `DOCS.md` was present and provided accurate history for the earlier blueprint and content tasks.
+- The live repo is still a very small Next.js App Router app with these runtime surfaces:
+  - `app/page.tsx`
+  - `app/layout.tsx`
+  - `app/checkout/success/page.tsx`
+  - placeholder webhook and cron routes
+- The deployed homepage currently presents ONE THING as a scaffold and implementation blueprint, not as a product that can be purchased today.
+- The deployed success page exists and is already usable as a stable post-checkout destination.
+- The repo contains meaningful planning and support artifacts that are not yet wired into a working product:
+  - `docs/one-thing-v1-technical-plan.md`
+  - `docs/one-thing-mvp-brief.md`
+  - `prisma/schema.prisma`
+  - `db/migrations/0001_one_thing_v1.sql`
+  - `lib/billing/plans.ts`
+  - `lib/email/cadence.ts`
+  - `lib/cron/send-queue.ts`
+  - `lib/actions/selection.ts`
+  - `lib/email/tracking-links.ts`
+- The checked-in content inventory is stronger than the product plumbing:
+  - `data/action-library/launch-categories.json` contains 6 launch categories
+  - `data/action-library/launch-actions.json` contains 66 actions total, 11 per category, with 1 fallback per category
+  - `data/action-library/mvp-organization-actions.json` contains 30 organization-only actions and is the best candidate for a narrow first paid beta
+- The repo does not currently contain a NanoCorp payment webhook route at `app/api/webhooks/nanocorp/route.ts`, even though NanoCorp forwards completed checkout events there.
+- External system checks during this audit showed:
+  - `nanocorp products list` returned no products
+  - `nanocorp payments link` returned no payment link
+  - `nanocorp payments revenue` returned `$0` and `0` payments
+  - the connected Postgres database showed no public tables during a quick inspection
+- The fastest path to the first paid signup is narrower than the existing blueprint:
+  - sell one offer only
+  - use NanoCorp hosted checkout instead of building direct Stripe flows first
+  - fulfill early buyers manually with the existing organization content
+
+## Changes Made - 2026-04-21 First Paid Signup Audit
+
+- Added `docs/first-paid-signup-audit-2026-04-21.md`.
+- The audit memo documents:
+  - current shipped app state
+  - the major gaps blocking revenue
+  - the single fastest path to first paid signup
+  - a focused CEO task list for what to do next
+- `npm ci` was required locally because `node_modules` was absent in the checkout at verification time.
+- `npm run build` passed after dependencies were restored.
