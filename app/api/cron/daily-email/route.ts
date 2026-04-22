@@ -1,8 +1,4 @@
-import {
-  DailyDeliveryStatus,
-  DailyDeliveryType,
-  UserEventType,
-} from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import {
@@ -158,7 +154,7 @@ async function logDelivery(
           userId,
           actionId: selection.actionId,
           type: DailyDeliveryType.DAILY,
-          status: DailyDeliveryStatus.SENT,
+          status: Prisma.DailyDeliveryStatus.SENT,
           localDate,
           sentAt,
         })),
