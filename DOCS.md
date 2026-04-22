@@ -238,6 +238,51 @@
   - `STRIPE_PRICE_ID_2CAT=price_1TOkXA8Jf6UbCUSKaHcYRnzA`
   - `STRIPE_PRICE_ID_3CAT=price_1TOkY18Jf6UbCUSKaJykyfqT`
 - A follow-up `nanocorp vercel env list` confirmed those four variables are now present for `production` and `preview`.
+
+## Repository Findings - 2026-04-22 E2E Checklist and Helper Scripts Task
+
+- `DOCS.md` was present and remains the required first read before further repo exploration.
+- The current production app domain in repo docs is `https://onestep.nanocorp.app`, but the requested checklist still needs `https://[domain]` placeholders so the same document can be reused for preview or alternate deployment URLs.
+- The current shipped route names relevant to the ONE THING full flow are:
+  - landing page: `/`
+  - onboarding: `/onboarding`
+  - checkout API: `/api/checkout`
+  - Stripe webhook: `/api/webhooks/stripe`
+  - welcome redirect: `/welcome?session_id=...`
+  - tracking redirect: `/tracked?response=done|skip`
+  - cron endpoints: `/api/cron/daily-email`, `/api/cron/weekly-email`, `/api/cron/monthly-email`
+- The daily and monthly cron routes return a JSON payload that includes a top-level `sent` count.
+- The weekly cron route returns `sentCount` instead of `sent`, so any helper should print the full JSON rather than assuming one shared shape.
+- The repo did not contain a `scripts/` directory before this task.
+- The Prisma schema confirms the database tables needed for the manual verification steps:
+  - `users`
+  - `subscriptions`
+  - `user_preferences`
+  - `daily_delivery_logs`
+  - `user_events`
+
+## Changes Made - 2026-04-22 E2E Checklist and Helper Scripts Task
+
+- Added `docs/e2e-test-checklist.md` with the requested end-to-end Stripe test mode checklist.
+- The new checklist includes:
+  - pre-flight env, Stripe, Resend, and deployment checks
+  - the full landing -> onboarding -> Stripe checkout -> welcome flow
+  - webhook, database, cron, tracking-link, weekly, monthly, and cancellation checks
+  - helper SQL snippets for verifying persisted rows in Postgres
+  - helper notes for using Stripe CLI webhook forwarding with either local or deployed targets
+- Added `scripts/test-cron.sh` to fire the current daily, weekly, and monthly cron endpoints with `Authorization: Bearer $CRON_SECRET`.
+- Added `scripts/test-webhook.sh` to trigger the three Stripe events named in the task through Stripe CLI.
+- Both scripts were written as executable bash helpers and include simple dependency checks so failures are obvious.
+
+## Verification Notes - 2026-04-22 E2E Checklist and Helper Scripts Task
+
+- `bash -n scripts/test-cron.sh scripts/test-webhook.sh` passed.
+- `npm run lint` initially failed because local dependencies were not installed in this checkout and `eslint` was missing from `PATH`.
+- Restored local dependencies successfully with `npm ci`.
+- `npm run build` initially failed because the local Prisma client was stale and did not include the current schema enums.
+- Regenerated the Prisma client successfully with dummy `DATABASE_URL` and `DIRECT_URL` values because client generation did not require a live database connection for this task.
+- `npm run lint` passed after dependency restore.
+- `npm run build` passed after Prisma client regeneration.
 - The deployed checkout route will still require follow-up Vercel env configuration for `STRIPE_SECRET_KEY` before production checkout session creation can succeed.
 - `STRIPE_SECRET_KEY` is still missing from the live Vercel project, so production checkout session creation remains blocked until that secret is provided.
 - The checkout wiring changes were committed as `6e5c118` (`Wire Stripe checkout sessions into onboarding`) and pushed to `origin/main`.
