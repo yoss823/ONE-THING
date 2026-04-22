@@ -915,3 +915,75 @@
 - `git diff --check` passed.
 - `nanocorp vercel env list` confirmed `CRON_SECRET` is now present for `production` and `preview`.
 - `nanocorp vercel env list` also confirmed `RESEND_API_KEY` is still not configured on the live project, so production email sends remain blocked until that secret is added.
+
+## Repository Findings - 2026-04-21 Production Environment Variable Setup Task
+
+- `DOCS.md` was present and remained the required first read before re-exploring the repo.
+- `.env.example` currently defines the full checked-in env contract for this repo:
+  - app urls: `APP_URL`, `NEXT_PUBLIC_BASE_URL`
+  - admin: `ADMIN_EXPORT_TOKEN`
+  - Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `DIRECT_URL`
+  - cron: `CRON_SECRET`
+  - Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_1CAT`, `STRIPE_PRICE_ID_2CAT`, `STRIPE_PRICE_ID_3CAT`, `STRIPE_BILLING_PORTAL_CONFIGURATION_ID`
+  - Resend: `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `EMAIL_FROM`, `EMAIL_REPLY_TO`
+- Active code references confirmed that the runtime currently uses or expects at least:
+  - `APP_URL`
+  - `NEXT_PUBLIC_BASE_URL`
+  - `DATABASE_URL`
+  - `DIRECT_URL`
+  - `CRON_SECRET`
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET`
+  - `RESEND_API_KEY`
+  - `RESEND_WEBHOOK_SECRET`
+  - `EMAIL_FROM`
+  - `EMAIL_REPLY_TO`
+- `prisma/schema.prisma` was already compatible with the requested Supabase/Prisma setup:
+  - `url = env("DATABASE_URL")`
+  - `directUrl = env("DIRECT_URL")`
+  - no schema change was required for this task
+- `nanocorp vercel env list` before the documentation changes showed the live Vercel project currently had:
+  - `DATABASE_URL` for `production`, `preview`, and `development`
+  - `CRON_SECRET`, `NEXT_PUBLIC_BASE_URL`, and `STRIPE_PRICE_ID_{1,2,3}CAT` for `production` and `preview`
+  - no `APP_URL`
+- `nanocorp vercel env set` updates values successfully, but in this environment it did not provide a working way to add `development` targets:
+  - new variables defaulted to `production` and `preview`
+  - passing `target: ["development"]` inside the env var payload was ignored
+  - passing a top-level `target: ["development"]` to the raw `set_vercel_env_vars` backend tool was also ignored
+- Browser automation was prepared for dashboard access:
+  - `agent-browser install` succeeded and Chrome 147.0.7727.57 was installed
+  - opening `https://vercel.com/dashboard` stopped at the Vercel login screen because there was no authenticated session available in this environment
+
+## Changes Made - 2026-04-21 Production Environment Variable Setup Task
+
+- Added `docs/env-setup.md` with a full environment setup guide for ONE THING.
+- The new guide includes:
+  - every env var from `.env.example`
+  - where each value comes from
+  - which values are public (`NEXT_PUBLIC_`) vs server-only
+  - the exact `openssl rand -hex 16` command for `CRON_SECRET`
+  - the Stripe test-to-live cutover note for `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and the three `STRIPE_PRICE_ID_*` values
+  - target-specific URL guidance for `APP_URL` and `NEXT_PUBLIC_BASE_URL`
+  - the current Vercel env coverage verified during this task
+- Added `APP_URL=https://onestep.nanocorp.app` to the live Vercel project for `production` and `preview` because the repo expects it and it was missing from the current project env inventory.
+
+## Verification Notes - 2026-04-21 Production Environment Variable Setup Task
+
+- `nanocorp vercel env list` after the change confirmed:
+  - `APP_URL` now exists for `production` and `preview`
+  - `DATABASE_URL` still exists for `production`, `preview`, and `development`
+  - `CRON_SECRET`, `NEXT_PUBLIC_BASE_URL`, and `STRIPE_PRICE_ID_{1,2,3}CAT` remain present for `production` and `preview`
+- The missing values that still require manual secret entry from provider dashboards are:
+  - `ADMIN_EXPORT_TOKEN`
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `DIRECT_URL`
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET`
+  - `STRIPE_BILLING_PORTAL_CONFIGURATION_ID`
+  - `RESEND_API_KEY`
+  - `RESEND_WEBHOOK_SECRET`
+  - `EMAIL_FROM`
+  - `EMAIL_REPLY_TO`
+- The NanoCorp Vercel tooling available in this environment was not sufficient to add the missing `development` targets for keys that already exist only on `production` and `preview`.
