@@ -33,8 +33,7 @@ Rules:
 | `STRIPE_BILLING_PORTAL_CONFIGURATION_ID` | No | Stripe -> Settings -> Billing -> Customer portal configuration. | Starts with `bpc_...`. Often differs between test and live mode. |
 | `RESEND_API_KEY` | No | Resend -> API Keys. | Server-only email delivery key. |
 | `RESEND_WEBHOOK_SECRET` | No | Resend -> Webhooks -> endpoint secret. | Needed for the Resend webhook route. |
-| `EMAIL_FROM` | No | Use a verified sender identity from Resend. | Example format: `ONE THING <hello@your-domain.com>`. |
-| `EMAIL_REPLY_TO` | No | Use the support inbox the team monitors. | Example: `help@your-domain.com`. |
+| `EMAIL_REPLY_TO` | No | Use the inbox the team monitors for replies. | Current recommended value: `hello@onething.so`. |
 
 ## Stripe Test to Live Cutover
 

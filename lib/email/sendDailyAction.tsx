@@ -5,6 +5,7 @@ import {
   generateDailyActionHtml,
   generateDailyActionText,
 } from "@/emails/DailyActionEmail";
+import { EMAIL_FROM } from "@/lib/email/sender";
 
 function getResendClient(): Resend {
   const apiKey = process.env.RESEND_API_KEY;
@@ -23,7 +24,7 @@ export async function sendDailyActionEmail(
   const resend = getResendClient();
 
   await resend.emails.send({
-    from: "ONE THING <hello@onething.so>",
+    from: EMAIL_FROM,
     to: params.userEmail,
     subject,
     html: generateDailyActionHtml(params),
