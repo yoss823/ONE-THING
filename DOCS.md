@@ -1,5 +1,16 @@
 # DOCS
 
+## Changes Made - 2026-04-22 Activation Guide Task
+
+- Created `docs/activation-guide.md` — master activation document for ONE THING product.
+- Guide covers 7 sections: Vercel import → env vars → first deploy → Stripe webhook → Resend DNS → E2E test → go-live checklist.
+- Uses exact env variable names from `.env.example` (e.g. `STRIPE_PRICE_ID_1CAT` not `NEXT_PUBLIC_STRIPE_PRICE_1`).
+- Cron test command references `/api/cron/daily-email` (the actual route in this repo).
+- Includes all 18 required environment variables with sources and placeholder formats.
+- Designed for non-developer users with ✅ checkboxes and ⚠️ warnings for order-sensitive steps.
+
+---
+
 ## Repository Findings - 2026-04-21 Email Response Tracking Task
 
 - `DOCS.md` was present and remains the required first read before exploring the repo again.
