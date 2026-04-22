@@ -1,4 +1,8 @@
-import { Prisma } from "@prisma/client";
+import {
+  DailyDeliveryType,
+  Prisma,
+  UserEventType,
+} from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import {

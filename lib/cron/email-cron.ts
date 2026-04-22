@@ -1,7 +1,7 @@
 import {
   ActionCategory,
-  DailyDeliveryStatus,
   DailyDeliveryType,
+  Prisma,
   UserEventType,
 } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -204,7 +204,7 @@ async function logDailySend(params: {
         userId: params.userId,
         actionId: action.actionId,
         type: DailyDeliveryType.DAILY,
-        status: DailyDeliveryStatus.SENT,
+        status: Prisma.DailyDeliveryStatus.SENT,
         localDate: params.localDate,
         sentAt: params.sentAt,
       })),
@@ -441,10 +441,10 @@ export async function handleMonthlyClarityEmailCron(
         }),
       ]);
       const completedLogs = recentDailyLogs.filter(
-        (log) => log.status === DailyDeliveryStatus.COMPLETED,
+        (log) => log.status === Prisma.DailyDeliveryStatus.COMPLETED,
       );
       const skippedLogs = recentDailyLogs.filter(
-        (log) => log.status === DailyDeliveryStatus.SKIPPED,
+        (log) => log.status === Prisma.DailyDeliveryStatus.SKIPPED,
       );
       const currentCategories = user.preference.categories.map(formatCategoryLabel);
       const topCategory = chooseTopCategory(
@@ -471,7 +471,7 @@ export async function handleMonthlyClarityEmailCron(
         data: {
           userId: user.id,
           type: DailyDeliveryType.MONTHLY_CLARITY,
-          status: DailyDeliveryStatus.SENT,
+          status: Prisma.DailyDeliveryStatus.SENT,
           localDate,
           sentAt: new Date(),
         },

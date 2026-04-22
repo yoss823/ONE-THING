@@ -1,4 +1,8 @@
-import { Prisma, ActionCategory } from "@prisma/client";
+import {
+  ActionCategory,
+  DailyDeliveryType,
+  Prisma,
+} from "@prisma/client";
 
 import {
   selectAction,
@@ -38,8 +42,8 @@ function getDefaultComplexity(energyLevel: number): ActionComplexity {
 }
 
 function countLeadingStatus(
-  statuses: DailyDeliveryStatus[],
-  targetStatus: DailyDeliveryStatus,
+  statuses: Prisma.DailyDeliveryStatus[],
+  targetStatus: Prisma.DailyDeliveryStatus,
 ): number {
   let count = 0;
 
@@ -58,7 +62,7 @@ function buildCategoryState(
   defaultComplexity: ActionComplexity,
   logs: Array<{
     actionId: string | null;
-    status: DailyDeliveryStatus;
+    status: Prisma.DailyDeliveryStatus;
     action: {
       texture: string;
     } | null;
@@ -111,7 +115,7 @@ export async function selectDailyEmailActions({
     prisma.dailyDeliveryLog.findMany({
       where: {
         userId,
-        type: Prisma.DailyDeliveryType.DAILY,
+        type: DailyDeliveryType.DAILY,
         actionId: {
           not: null,
         },

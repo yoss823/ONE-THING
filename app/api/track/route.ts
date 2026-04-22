@@ -1,6 +1,6 @@
 import {
-  DailyDeliveryStatus,
   DailyDeliveryType,
+  Prisma,
   UserEventType,
 } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
@@ -22,10 +22,12 @@ function redirectToTracked(
   );
 }
 
-function getDeliveryStatus(response: TrackingResponse): DailyDeliveryStatus {
+function getDeliveryStatus(
+  response: TrackingResponse,
+): Prisma.DailyDeliveryStatus {
   return response === "done"
-    ? DailyDeliveryStatus.COMPLETED
-    : DailyDeliveryStatus.SKIPPED;
+    ? Prisma.DailyDeliveryStatus.COMPLETED
+    : Prisma.DailyDeliveryStatus.SKIPPED;
 }
 
 export async function GET(request: NextRequest) {
