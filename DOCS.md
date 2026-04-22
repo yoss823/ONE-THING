@@ -987,3 +987,51 @@
   - `EMAIL_FROM`
   - `EMAIL_REPLY_TO`
 - The NanoCorp Vercel tooling available in this environment was not sufficient to add the missing `development` targets for keys that already exist only on `production` and `preview`.
+
+## Repository Findings - 2026-04-22 Resend DNS Setup Task
+
+- `DOCS.md` was present and remained the required first read before re-exploring the repo.
+- The current email send paths in the repo are:
+  - `lib/email/sendDailyAction.tsx`
+  - `lib/email/sendMonthlyClarity.tsx`
+  - `app/api/cron/weekly-email/route.ts`
+- Before this task:
+  - daily email already sent from `ONE THING <hello@onething.so>`
+  - weekly summary already sent from `ONE THING <hello@onething.so>`
+  - monthly clarity allowed an `EMAIL_FROM` env override and only defaulted to `ONE THING <hello@onething.so>`
+- Repo-local sender examples still included placeholder domains outside the send functions:
+  - `.env.example` used `EMAIL_FROM=ONE THING <hello@example.com>`
+  - `.env.example` used `EMAIL_REPLY_TO=help@example.com`
+  - `docs/env-setup.md` still documented `EMAIL_FROM` as a required configurable sender value
+- Current Resend docs are not fully consistent across pages about DNS record shape, so the new setup guide must instruct the team to trust the live Resend dashboard values:
+  - SPF and MX are commonly shown on the `send` subdomain rather than the apex
+  - DKIM may appear as either `TXT` or `CNAME` records depending on what Resend shows for the domain
+
+## Changes Made - 2026-04-22 Resend DNS Setup Task
+
+- Added `lib/email/sender.ts` with the shared sender constant `ONE THING <hello@onething.so>`.
+- Updated all live email send paths to use the shared sender constant:
+  - `lib/email/sendDailyAction.tsx`
+  - `lib/email/sendMonthlyClarity.tsx`
+  - `app/api/cron/weekly-email/route.ts`
+- Removed the runtime `EMAIL_FROM` override from monthly clarity sends so every current email path now uses the same verified sender address.
+- Updated `.env.example` to remove the stale `EMAIL_FROM` placeholder and set `EMAIL_REPLY_TO=hello@onething.so`.
+- Updated `docs/env-setup.md` to stop documenting `EMAIL_FROM` as an active env requirement and to recommend `hello@onething.so` for `EMAIL_REPLY_TO`.
+- Added `docs/resend-dns-setup.md` with:
+  - the Resend domain-add flow for `onething.so`
+  - the DNS record categories to expect
+  - provider-specific instructions for Cloudflare, Namecheap, and GoDaddy
+  - generic DNS entry guidance for other providers
+  - verification steps
+  - `RESEND_API_KEY` setup guidance
+  - the code paths that already send from `ONE THING <hello@onething.so>`
+
+## Verification Notes - 2026-04-22 Resend DNS Setup Task
+
+- `git diff --check` passed.
+- `npm run lint` initially failed because the checkout did not have local dependencies installed and `eslint` was not available on `PATH`.
+- Restored dependencies successfully with `npm ci`.
+- `npm run lint` passed after dependency restore.
+- `npm run build` initially failed because the local Prisma client was stale and did not include the current `DailyDeliveryStatus` exports used by the cron routes.
+- Regenerated the Prisma client successfully with `DIRECT_URL="$DATABASE_URL" npm run db:generate`.
+- `npm run build` passed after Prisma client regeneration.
