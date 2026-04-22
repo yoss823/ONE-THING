@@ -1080,3 +1080,41 @@
 - `npm run build` initially failed because the local Prisma client was stale and did not include the current `DailyDeliveryStatus` exports used by the cron routes.
 - Regenerated the Prisma client successfully with `DIRECT_URL="$DATABASE_URL" npm run db:generate`.
 - `npm run build` passed after Prisma client regeneration.
+
+## Repository Findings - 2026-04-22 Stripe Webhook Registration Guide Task
+
+- `DOCS.md` was present and remained the required first read before any new repo exploration.
+- `app/api/webhooks/stripe/route.ts` already satisfies the webhook verification contract requested in this task:
+  - reads the raw body with `request.text()`
+  - reads the `stripe-signature` header
+  - verifies with `stripe.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET)`
+  - handles `checkout.session.completed`
+  - handles `customer.subscription.updated`
+  - handles `customer.subscription.deleted`
+  - returns `400` for signature verification failures
+  - returns `200` on success
+- No webhook handler code changes were required for this task.
+- The repo did not yet contain `docs/stripe-webhook-setup.md`.
+- The current production custom domain remains `https://onestep.nanocorp.app`, so the canonical live Stripe webhook endpoint is `https://onestep.nanocorp.app/api/webhooks/stripe`.
+- `nanocorp vercel env list` still only exposes environment key names and targets, not secret values; it confirmed `APP_URL` and `NEXT_PUBLIC_BASE_URL` exist for `production` and `preview`.
+
+## Changes Made - 2026-04-22 Stripe Webhook Registration Guide Task
+
+- Added `docs/stripe-webhook-setup.md` with:
+  - the canonical production webhook endpoint
+  - exact Stripe dashboard steps for test-mode endpoint creation
+  - exact Stripe dashboard steps for live-mode endpoint creation
+  - Vercel environment-variable scoping guidance for `STRIPE_WEBHOOK_SECRET`
+  - local Stripe CLI webhook forwarding and trigger instructions
+  - a short post-setup verification checklist
+- Recorded the handler audit and documentation change in `DOCS.md`.
+
+## Verification Notes - 2026-04-22 Stripe Webhook Registration Guide Task
+
+- Audited `app/api/webhooks/stripe/route.ts` against the requested webhook-signature requirements and found it already compliant.
+- `git diff --check` passed.
+- `npm run build` initially failed because the checkout did not have local dependencies installed and `next` was not available on `PATH`.
+- Restored dependencies successfully with `npm ci`.
+- `npm run build` then failed because the generated Prisma client was stale and did not include the current `DailyDeliveryStatus` exports used by the cron routes.
+- Regenerated the Prisma client successfully with `DIRECT_URL="$DATABASE_URL" npm run db:generate`.
+- `npm run build` passed after Prisma client regeneration.
