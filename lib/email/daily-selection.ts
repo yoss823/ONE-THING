@@ -1,8 +1,4 @@
-import {
-  ActionCategory,
-  DailyDeliveryStatus,
-  DailyDeliveryType,
-} from "@prisma/client";
+import { Prisma, ActionCategory } from "@prisma/client";
 
 import {
   selectAction,
@@ -72,11 +68,11 @@ function buildCategoryState(
     defaultComplexity,
     consecutiveDoneCount: countLeadingStatus(
       logs.map((log) => log.status),
-      DailyDeliveryStatus.COMPLETED,
+      Prisma.DailyDeliveryStatus.COMPLETED,
     ),
     consecutivePauseCount: countLeadingStatus(
       logs.map((log) => log.status),
-      DailyDeliveryStatus.SKIPPED,
+      Prisma.DailyDeliveryStatus.SKIPPED,
     ),
     recentActionIds: logs.flatMap((log) => (log.actionId ? [log.actionId] : [])),
     recentTextures: logs.flatMap((log) =>
@@ -115,7 +111,7 @@ export async function selectDailyEmailActions({
     prisma.dailyDeliveryLog.findMany({
       where: {
         userId,
-        type: DailyDeliveryType.DAILY,
+        type: Prisma.DailyDeliveryType.DAILY,
         actionId: {
           not: null,
         },
