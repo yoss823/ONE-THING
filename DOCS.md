@@ -168,6 +168,38 @@
 
 ---
 
+## Repository Findings - 2026-04-23 Prisma Migration Fix Documentation Task
+
+- `DOCS.md` was present and read first.
+- `prisma/migrations/` folder exists with 3 migrations:
+  - `20260421133000_initial/migration.sql` — creates all tables: users, subscriptions, user_preferences, actions, daily_sends, daily_delivery_logs, user_events, adaptation_state plus all enums
+  - `20260421222500_add_user_timezone_for_daily_email/migration.sql`
+  - `20260421223500_monthly_clarity_email/migration.sql`
+- `prisma/schema.prisma` uses both `DATABASE_URL` (pooled, for queries) and `DIRECT_URL` (non-pooled, for migrations) — both are required for Neon compatibility
+- Vercel already has `DATABASE_URL` and `DIRECT_URL` set (confirmed in prior task), meaning auto-migration on deploy just needs the build command update
+- The root cause of P2021 is that `prisma migrate deploy` was never run against the Neon production database — migrations only ran against the local dev database
+
+## Changes Made - 2026-04-23 Prisma Migration Fix Documentation Task
+
+- Created `docs/prisma-neon-migration-fix.md` — comprehensive step-by-step remediation guide covering:
+  - Root cause explanation
+  - Option A: `prisma migrate deploy` with Neon env vars (recommended, applies here since migrations folder exists)
+  - Option B: `prisma db push` fallback for no-migrations-folder scenario
+  - Safe method using `.env.production.local` to avoid polluting local `.env`
+  - dotenv-cli alternative
+  - Vercel build-command auto-migration setup (advanced)
+  - End-to-end verification checklist
+  - Table with all 8 expected tables to confirm in Neon console
+- Updated `DOCS.md` with these findings
+
+## Verification Notes - 2026-04-23 Prisma Migration Fix Documentation Task
+
+- Confirmed `prisma/migrations/` exists — Option A path is correct for this repo
+- Confirmed `DIRECT_URL` env var is required (schema.prisma uses it) and is already set in Vercel
+- No code changes were made — this task is documentation only
+
+---
+
 ## Repository Findings - 2026-04-23 Email Lifecycle Audit Task
 
 - `DOCS.md` was present and remains the required first read before exploring the repo again.
