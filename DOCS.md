@@ -1,5 +1,176 @@
 # DOCS
 
+## Repository Findings - 2026-04-22 Next Config JS Swap Task
+
+- `DOCS.md` was present and remains the required first read before exploring the repo again.
+- The project root contains `package.json`, `DOCS.md`, and `next.config.ts`.
+- No `next.config.js` existed at the start of this task.
+- The existing `next.config.ts` only set `typescript.ignoreBuildErrors = true` and exported via `export default`.
+- The existing root config did not include `eslint.ignoreDuringBuilds = true`, so a minimal CommonJS replacement is required for the requested Vercel CI behavior.
+- `node_modules` was missing during verification, and the first `npm run build` attempt failed in `prebuild` with `sh: 1: prisma: not found` before Next.js build execution began.
+
+## Changes Made - 2026-04-22 Next Config JS Swap Task
+
+- Deleted the root `next.config.ts`.
+- Added a new root `next.config.js` as a CommonJS export with exactly these settings:
+  - `typescript.ignoreBuildErrors = true`
+  - `eslint.ignoreDuringBuilds = true`
+- Kept the replacement config minimal with no additional options.
+
+## Verification Notes - 2026-04-22 Next Config JS Swap Task
+
+- Verified the project root now contains `package.json` and `next.config.js`, with no remaining root `next.config.ts`.
+- Restored local dependencies with `npm ci` because `node_modules` was absent in the checkout.
+- `npm run build` passed after dependency restore.
+- The build output showed `Skipping validation of types`, which confirms the new config is being read during build.
+- Next.js `16.2.4` emitted warnings that the `eslint` key in `next.config.js` is no longer supported, but the build still completed successfully and the file was kept exactly as requested for Vercel CI behavior.
+- The config swap was committed as `5ab00ef` (`fix: use js next config for vercel ci`) and pushed to `origin/main`.
+- After the required post-push wait, one deployment verification attempt was made with `agent-browser open https://onestep.nanocorp.app`.
+- That verification attempt failed locally before navigation because Chrome is not installed for `agent-browser`:
+  - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
+- No second deployment verification attempt was made.
+
+## Repository Findings - 2026-04-22 Prisma v6 DailyDeliveryStatus Migration Task
+
+- `DOCS.md` was present and remains the required first read before exploring the repo again.
+- A repo-wide TypeScript search for `DailyDeliveryStatus` found four remaining Prisma v5-style enum import sites:
+  - `lib/email/daily-selection.ts`
+  - `lib/cron/email-cron.ts`
+  - `app/api/track/route.ts`
+  - `app/api/cron/daily-email/route.ts`
+- `next.config.ts` existed and had only the placeholder config object before this task, so the TypeScript build safety net was not yet enabled.
+- After the enum migration edits, the TypeScript-only search for `DailyDeliveryStatus` returned namespace-style usages only, with no remaining bare imports from `@prisma/client`.
+
+## Changes Made - 2026-04-22 Prisma v6 DailyDeliveryStatus Migration Task
+
+- Updated `lib/email/daily-selection.ts` to import `Prisma` from `@prisma/client` and use `Prisma.DailyDeliveryStatus` in helper argument types, log typing, and status comparisons.
+- Updated `lib/cron/email-cron.ts` to remove the old enum import and use `Prisma.DailyDeliveryStatus` for daily-send inserts, monthly recap filtering, and monthly log creation.
+- Updated `app/api/track/route.ts` so delivery-status resolution now returns `Prisma.DailyDeliveryStatus` and uses namespace enum members.
+- Updated `app/api/cron/daily-email/route.ts` so daily delivery-log writes now use `Prisma.DailyDeliveryStatus.SENT`.
+- Updated `next.config.ts` to set `typescript.ignoreBuildErrors = true` as a temporary Vercel build safety net.
+
+## Verification Notes - 2026-04-22 Prisma v6 DailyDeliveryStatus Migration Task
+
+- `rg -n --glob '!node_modules' --glob '!.next' --glob '!.git' --glob '*.ts' --glob '*.tsx' 'DailyDeliveryStatus' .` returned only `Prisma.DailyDeliveryStatus` references after the code changes.
+- `grep -R "DailyDeliveryStatus" . --include='*.ts' --include='*.tsx' --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=.git` returned only namespace-style `Prisma.DailyDeliveryStatus` matches.
+- `npm ci` passed after confirming `node_modules` was missing in the checkout.
+- `npm run build` passed after the enum migration, and the build output explicitly showed `Skipping validation of types`, confirming `next.config.ts` is applying the temporary TypeScript build safety net.
+
+## Repository Findings - 2026-04-22 Neon Database Setup Task
+
+- `DOCS.md` was present and remains the required first read before exploring the repo again.
+- `prisma/schema.prisma` already contains the required core data model for this task:
+  - `User`
+  - `Subscription`
+  - `Action`
+  - `DailyDeliveryLog`
+  - `UserEvent`
+  - `UserPreference`
+  - `DailySend`
+  - `AdaptationState`
+- The task wording mentioned `ActionLog`, but the checked-in schema uses `UserEvent` as the action-response/event log model.
+- The runtime `DATABASE_URL` exposed in the environment resolves to a Neon host:
+  - `ep-tiny-sun-aemy249s.c-2.us-east-2.aws.neon.tech`
+- The shell environment did not expose `DIRECT_URL`, so local Prisma execution needed a fallback.
+- `.env.local` was missing at the start of the task.
+- `node_modules` was also missing at the start of the task, so local Prisma commands required `npm ci` first.
+- `prisma.config.ts` exists and means Prisma CLI reads connection values from the shell environment rather than auto-loading `.env.local`.
+- `npx prisma migrate deploy` succeeded against Neon and reported:
+  - `3 migrations found`
+  - `No pending migrations to apply`
+- A direct `psql` verification confirmed these expected tables already exist in `public`:
+  - `actions`
+  - `adaptation_state`
+  - `daily_delivery_logs`
+  - `daily_sends`
+  - `subscriptions`
+  - `user_events`
+  - `user_preferences`
+  - `users`
+- `npx prisma db seed` initially failed because the local Prisma client had not been generated after dependency install.
+- `npx prisma generate` fixed that issue, and the rerun of `npx prisma db seed` completed successfully.
+- Direct SQL verification after seeding confirmed `185` active actions with per-category counts:
+  - `health_energy`: `31`
+  - `mental_clarity`: `31`
+  - `organization`: `30`
+  - `personal_projects`: `31`
+  - `relationships`: `31`
+  - `work_business`: `31`
+
+## Changes Made - 2026-04-22 Neon Database Setup Task
+
+- Wrote `.env.local` locally with:
+  - `DATABASE_URL=<live Neon URI>`
+  - `DIRECT_URL=<same live Neon URI>`
+- Installed project dependencies with `npm ci`.
+- Generated the local Prisma client with `npx prisma generate`.
+- Applied the checked-in Prisma migration set against Neon with `npx prisma migrate deploy`.
+- Seeded the action library into Neon with `npx prisma db seed`.
+- Updated `.env.example` so the checked-in database examples now use Neon placeholder URIs rather than the older Supabase-specific database placeholders.
+- Updated `docs/env-setup.md` to document the Neon connection-string format required for Vercel `DATABASE_URL` and `DIRECT_URL`.
+- Appended the Neon setup outcome and verification details to `docs/deployment-audit.md`.
+
+## Verification Notes - 2026-04-22 Neon Database Setup Task
+
+- `npm ci` passed.
+- `npx prisma migrate deploy` passed and found no pending migrations.
+- `npx prisma db seed` passed after `npx prisma generate`.
+- Direct SQL verification with `psql` confirmed both the expected tables and the seeded action counts in Neon.
+
+## Repository Findings - 2026-04-22 Deployment Audit Task
+
+- `DOCS.md` was present and remains the required first read before re-exploring the repo.
+- The relevant shipped routes for this audit are present in the repo:
+  - landing page: `app/page.tsx`
+  - onboarding page: `app/onboarding/page.tsx`
+  - checkout route: `app/api/checkout/route.ts`
+  - tracking route: `app/api/track/route.ts`
+  - Stripe webhook route: `app/api/webhooks/stripe/route.ts`
+- The current live deployment at the start of this task did not match `main`:
+  - `/` returned `200` with the expected marketing copy and pricing
+  - `/api/track` returned `404`
+  - `/api/webhooks/stripe` returned `503` on an empty POST instead of the checked-in route's missing-signature `400`
+  - `/api/checkout` returned `400` for an empty body but `500` for a valid payload because Stripe was not configured
+- `npm run build` initially failed locally because the generated Prisma client did not match `prisma/schema.prisma`.
+- `npm run db:generate` initially failed because `DIRECT_URL` was absent from the shell environment.
+- `nanocorp vercel env list` initially showed these project env vars only:
+  - `APP_URL`
+  - `CRON_SECRET`
+  - `NEXT_PUBLIC_BASE_URL`
+  - `STRIPE_PRICE_ID_1CAT`
+  - `STRIPE_PRICE_ID_2CAT`
+  - `STRIPE_PRICE_ID_3CAT`
+  - `DATABASE_URL`
+- The missing Vercel env vars that matter most for the payment flow are:
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET`
+- `DIRECT_URL` was also missing in Vercel, which was relevant to Prisma tooling and build reproducibility even though runtime checkout uses `DATABASE_URL`.
+
+## Changes Made - 2026-04-22 Deployment Audit Task
+
+- Added a `prebuild` script in `package.json` that runs:
+  - `DIRECT_URL="${DIRECT_URL:-$DATABASE_URL}" prisma generate`
+- This makes local and Vercel builds regenerate a Prisma client that matches the checked-in schema even when only `DATABASE_URL` is configured.
+- Updated `app/api/checkout/route.ts` so missing checkout configuration now returns a clear `503` JSON error instead of falling through to a generic `500`.
+- Added `docs/deployment-audit.md` with the audit report covering:
+  - live behavior observed before fixes
+  - local verification after fixes
+  - current Vercel env inventory
+  - missing payment-critical env vars
+- Added `DIRECT_URL` to the Vercel project for `production` and `preview`.
+
+## Verification Notes - 2026-04-22 Deployment Audit Task
+
+- `npm ci` passed.
+- `npm run lint` passed.
+- `npm run build` passed after the new `prebuild` Prisma generation step was added.
+- Local production-server checks passed:
+  - `GET /api/track` returned `307`
+  - `POST /api/checkout` returned `400` on an empty body
+  - `POST /api/webhooks/stripe` returned `400` on a missing signature
+- Local browser verification confirmed all four onboarding steps render and that the final submit reaches `/api/checkout`.
+- With `STRIPE_SECRET_KEY` absent locally, the onboarding payment step now surfaces the explicit config error rather than a generic failure.
+
 ## Changes Made - 2026-04-22 Activation Guide Task
 
 - Created `docs/activation-guide.md` — master activation document for ONE THING product.
@@ -8,6 +179,56 @@
 - Cron test command references `/api/cron/daily-email` (the actual route in this repo).
 - Includes all 18 required environment variables with sources and placeholder formats.
 - Designed for non-developer users with ✅ checkboxes and ⚠️ warnings for order-sensitive steps.
+
+## Repository Findings - 2026-04-23 Welcome Email Task
+
+- `DOCS.md` was present and remains the required first read before exploring the repo again.
+- `emails/DailyActionEmail.tsx` is the closest implementation reference for this task and uses plain string-based HTML/text generation instead of a React Email component.
+- `lib/email/sendDailyAction.tsx` is the closest sender reference:
+  - it creates the `Resend` client locally
+  - it reads `RESEND_API_KEY`
+  - it sends both `html` and `text`
+  - it uses `EMAIL_FROM` from `lib/email/sender.ts`
+- `lib/email/sender.ts` centralizes the sender identity as `ONE THING <hello@onething.so>`.
+- `app/api/webhooks/stripe/route.ts` already handles `checkout.session.completed` in `handleCheckoutCompleted`, where it:
+  - normalizes `session.customer_email`
+  - parses category metadata into Prisma `ActionCategory[]`
+  - upserts the `User`, `Subscription`, and `UserPreference`
+  - currently logs `New subscriber:` after the database write
+- No checked-in `app/account/page.tsx` or `app/unsubscribe/page.tsx` route was found during this task, but existing emails already link to `/account` and `/unsubscribe`.
+- `lib/email/category-labels.ts` uses a different casing and punctuation style than the onboarding flow (`Health & energy` vs `Health / Energy`), so the welcome email needed its own display-label normalization to match the customer-facing onboarding copy.
+- The checkout’s local `node_modules` directory was absent at verification time, so `npm run lint` and `npm run build` initially failed because `eslint` and `prisma` were not installed in the workspace yet.
+
+## Changes Made - 2026-04-23 Welcome Email Task
+
+- Added `emails/WelcomeEmail.tsx` as a plain HTML/text email generator that follows the existing minimal email style:
+  - white background
+  - 480px content width
+  - system font
+  - exact requested body copy
+  - one category per line under `Your setup:`
+  - `Unsubscribe` and `Manage preferences` links in the footer
+- Added `lib/email/sendWelcomeEmail.ts`:
+  - creates a Resend client from `RESEND_API_KEY`
+  - formats checkout categories into onboarding-style display labels such as `Health / Energy`
+  - computes a next-morning label for the email template props
+  - builds an unsubscribe URL from `NEXT_PUBLIC_BASE_URL` or `APP_URL`, with `/unsubscribe?email=...` fallback behavior
+  - sends the welcome email from the shared `EMAIL_FROM` sender with both HTML and text bodies
+- Updated `app/api/webhooks/stripe/route.ts` so `handleCheckoutCompleted` now sends the welcome email immediately after the user/subscription upsert completes.
+- Wrapped the welcome-email send in a local `try/catch` so Resend failures are logged as `Welcome email failed (non-blocking):` and do not fail the already-successful Stripe webhook.
+- Restored local dependencies with `npm ci` so lint/build verification could run in this checkout.
+
+## Verification Notes - 2026-04-23 Welcome Email Task
+
+- `npm ci` passed.
+- `npm run lint` passed after dependencies were restored.
+- `npm run build` passed after dependencies were restored.
+- The build still emits the pre-existing Next.js 16 warning that the checked-in `eslint` key in `next.config.js` is no longer supported, but the production build completed successfully.
+- The welcome email work was committed as `4ad3122` (`feat: welcome email on checkout completion`) and pushed to `origin/main`.
+- After the required post-push wait, one deployment verification attempt was made with `agent-browser open https://onestep.nanocorp.app`.
+- That verification attempt failed locally before navigation because Chrome is not installed for `agent-browser`:
+  - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
+- No second deployment verification attempt was made.
 
 ---
 

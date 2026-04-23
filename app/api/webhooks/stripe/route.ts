@@ -2,6 +2,7 @@ import { ActionCategory } from "@prisma/client";
 import Stripe from "stripe";
 
 import { prisma } from "@/lib/db";
+import { sendWelcomeEmail } from "@/lib/email/sendWelcomeEmail";
 
 export const runtime = "nodejs";
 
@@ -225,6 +226,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       },
     },
   });
+
+  try {
+    await sendWelcomeEmail({
+      email,
+      categories,
+    });
+  } catch (error) {
+    console.error("Welcome email failed (non-blocking):", error);
+  }
 
   console.log("New subscriber:", email);
 }

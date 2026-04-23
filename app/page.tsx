@@ -1,4 +1,5 @@
 import Link from "next/link";
+import GuidedChoice from "@/components/GuidedChoice";
 
 const categories = [
   "Mental clarity",
@@ -33,11 +34,33 @@ export default function Home() {
         <div className="mt-10">
           <Link
             href="/onboarding"
-            className="inline-block bg-[#111] text-white text-base font-semibold px-8 py-4 rounded-full hover:bg-[#333] transition-colors"
+            className="inline-block bg-black text-white font-semibold px-8 py-4 text-base rounded-none hover:bg-gray-900 transition-colors"
           >
-            Pick your one thing
+            Start tomorrow at 8:00 AM
           </Link>
+          <p className="mt-3 text-sm text-gray-400">One email. One action. No login.</p>
         </div>
+      </section>
+
+      {/* Divider */}
+      <div className="border-t border-[#e5e5e5]" />
+
+      {/* Guided Choice */}
+      <GuidedChoice />
+
+      {/* Divider */}
+      <div className="border-t border-[#e5e5e5]" />
+
+      {/* Mini Demo */}
+      <section className="px-6 py-16 max-w-2xl mx-auto">
+        <p className="text-xs text-gray-400 mb-6 uppercase tracking-wide">What you receive every morning.</p>
+        <div className="border border-gray-200 rounded-sm p-6 max-w-sm mx-auto font-mono text-sm bg-white">
+          <p className="text-xs text-gray-400 mb-4">Your one thing for Monday, May 5</p>
+          <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Health / Energy</p>
+          <p className="text-base text-gray-900 mb-4 font-serif italic">Do 10 slow deep breaths before opening your laptop.</p>
+          <p className="text-sm text-gray-500">✅ Done &nbsp;·&nbsp; ⏸ Skip for today</p>
+        </div>
+        <p className="text-xs text-gray-400 mt-4 text-center">That&apos;s it. Every morning at 8:00 AM.</p>
       </section>
 
       {/* Divider */}
@@ -101,10 +124,11 @@ export default function Home() {
         <div className="mt-8">
           <Link
             href="/onboarding"
-            className="inline-block bg-[#111] text-white text-base font-semibold px-8 py-4 rounded-full hover:bg-[#333] transition-colors"
+            className="inline-block bg-black text-white font-semibold px-8 py-4 text-base rounded-none hover:bg-gray-900 transition-colors"
           >
-            Pick your one thing
+            Start tomorrow at 8:00 AM
           </Link>
+          <p className="mt-3 text-sm text-gray-400">One email. One action. No login.</p>
         </div>
       </section>
 
