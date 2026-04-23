@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ActionCategory {
+  MENTAL_CLARITY    @map("mental_clarity")
+  ORGANIZATION      @map("organization")
+  HEALTH_ENERGY     @map("health_energy")
+  WORK_BUSINESS     @map("work_business")
+  PERSONAL_PROJECTS @map("personal_projects")
+  RELATIONSHIPS     @map("relationships")
+}
+
+enum UserEventType {
+  SENT          @map("sent")
+  CLICKED_YES   @map("clicked_yes")
+  CLICKED_PAUSE @map("clicked_pause")
+}
+
+enum DailyDeliveryType {
+  DAILY           @map("daily")
+  WEEKLY          @map("weekly")
+  MONTHLY_CLARITY @map("monthly_clarity")
+}
+
+enum DailyDeliveryStatus {
+  SENT      @map("sent")
+  COMPLETED @map("completed")
+  SKIPPED   @map("skipped")
+}
+
+model User {
+  id              String           @id @default(uuid()) @db.Uuid
+  email           String           @unique @db.Text
+  timezone        String?          @db.Text
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  subscription    Subscription?
+  preference      UserPreference?
+  dailySends      DailySend[]
+  deliveryLogs    DailyDeliveryLog[]
+  userEvents      UserEvent[]
+  adaptationState AdaptationState?
+
+  @@map("users")
+}
+
+model Subscription {
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @unique @map("user_id") @db.Uuid
+  stripeCustomerId     String?  @unique @map("stripe_customer_id") @db.Text
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id") @db.Text
+  plan                 String   @db.Text
+  status               String   @db.Text
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model UserPreference {
+  userId           String           @id @map("user_id") @db.Uuid
+  categories       ActionCategory[]
+  energyLevel      Int              @map("energy_level") @db.SmallInt
+  availableMinutes Int              @map("available_minutes") @db.SmallInt
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model Action {
+  id               String         @id @db.Text
+  category         ActionCategory
+  text             String         @db.Text
+  texture          String         @db.Text
+  complexity       Int            @db.SmallInt
+  estimatedMinutes Int            @map("estimated_minutes") @db.SmallInt
+  active           Boolean        @default(true)
+  dailySends       DailySend[]
+  deliveryLogs     DailyDeliveryLog[]
+  userEvents       UserEvent[]
+
+  @@index([category, active])
+  @@map("actions")
+}
+
+model DailySend {
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  actionId String?  @map("action_id") @db.Text
+  sentAt   DateTime @default(now()) @map("sent_at") @db.Timestamptz(6)
+  status   String   @db.Text
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action   Action?  @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sentAt])
+  @@index([actionId, sentAt])
+  @@map("daily_sends")
+}
+
+model DailyDeliveryLog {
+  id          String              @id @default(uuid()) @db.Uuid
+  userId      String              @map("user_id") @db.Uuid
+  actionId    String?             @map("action_id") @db.Text
+  type        DailyDeliveryType
+  status      DailyDeliveryStatus @default(SENT)
+  localDate   DateTime            @map("local_date") @db.Date
+  sentAt      DateTime            @default(now()) @map("sent_at") @db.Timestamptz(6)
+  respondedAt DateTime?           @map("responded_at") @db.Timestamptz(6)
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      Action?             @relation(fields: [actionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, localDate, type])
+  @@index([userId, status, sentAt])
+  @@index([actionId, sentAt])
+  @@map("daily_delivery_logs")
+}
+
+model UserEvent {
+  id        String        @id @default(uuid()) @db.Uuid
+  userId    String        @map("user_id") @db.Uuid
+  eventType UserEventType @map("event_type")
+  actionId  String?       @map("action_id") @db.Text
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    Action?       @relation(fields: [actionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, eventType, createdAt])
+  @@map("user_events")
+}
+
+model AdaptationState {
+  userId                    String   @id @map("user_id") @db.Uuid
+  consecutivePauses         Int      @default(0) @map("consecutive_pauses") @db.SmallInt
+  consecutiveCompletions    Int      @default(0) @map("consecutive_completions") @db.SmallInt
+  currentComplexityModifier Int      @default(0) @map("current_complexity_modifier") @db.SmallInt
+  updatedAt                 DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("adaptation_state")
+}

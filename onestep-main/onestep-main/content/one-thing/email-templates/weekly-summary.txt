@@ -1,0 +1,16 @@
+Subject: Weekly summary: what moved and what needs less friction
+Preheader: A short recap, then one adjustment for the coming week.
+
+Weekly summary
+
+Delivered
+- {{daily_emails_sent}} daily emails were sent this week.
+
+Completed
+- {{done_count}} actions were marked done.
+- Most active category: {{top_category}}.
+
+Adjustment
+- {{adjustment_note}}
+
+Review settings: {{settings_url}}
