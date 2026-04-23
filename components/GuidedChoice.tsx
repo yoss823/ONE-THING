@@ -22,7 +22,7 @@ export default function GuidedChoice() {
   const [selected, setSelected] = useState<number | null>(null);
 
   return (
-    <section className="px-6 py-16 max-w-2xl mx-auto">
+    <div className="w-full mb-4">
       <p className="text-sm text-gray-400 mb-4">This works best if you feel...</p>
       <div className="flex flex-col sm:flex-row gap-3">
         {choices.map((choice, i) => (
@@ -56,6 +56,6 @@ export default function GuidedChoice() {
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

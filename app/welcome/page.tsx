@@ -114,18 +114,7 @@ function WelcomeContent() {
         )}
 
         <p style={{ fontSize: "0.875rem", color: "#888" }}>
-          <a
-            href="/account"
-            style={{ color: "#555", textDecoration: "none" }}
-            onMouseOver={(e) =>
-              ((e.currentTarget as HTMLAnchorElement).style.color = "#111")
-            }
-            onMouseOut={(e) =>
-              ((e.currentTarget as HTMLAnchorElement).style.color = "#555")
-            }
-          >
-            Manage your subscription →
-          </a>
+          You can manage your subscription from any ONE THING email.
         </p>
       </div>
     </main>

@@ -1,5 +1,100 @@
 # DOCS
 
+## Findings - 2026-04-23 Attentiq Audit & Restoration Task
+
+### Result: BLOCKED — nanocorp-hq/attentiq is inaccessible from this environment
+
+**Root cause:** The current worker agent runs under company `OneStep` (nanocorp-hq/onestep). The SSH deploy key in `~/.ssh/id_ed25519` is a repo-scoped GitHub deploy key authorized ONLY for `nanocorp-hq/onestep`. It cannot access `nanocorp-hq/attentiq`.
+
+**Evidence gathered:**
+- `git ls-remote git@github.com:nanocorp-hq/attentiq.git` → `ERROR: Repository not found`
+- `curl https://api.github.com/repos/nanocorp-hq/attentiq` → HTTP 404
+- SSH auth response: `Hi nanocorp-hq/onestep! You've successfully authenticated...` (repo-scoped key)
+- No GITHUB_TOKEN, GH_TOKEN, or GitHub App token in environment
+- NanoCorp internal tools list has no GitHub-access tools (only: list_emails, send_email, products, vercel, documents, analytics, prospects)
+- `~/.gitconfig` identifies agent as GitHub user `plbiojout` (NanoCorp Agent) but no PAT is stored
+- This is at minimum the THIRD agent run that has encountered this same blocker (see previous DOCS entries below)
+
+**What this task required:**
+1. Clone nanocorp-hq/attentiq
+2. Find the ONE THING migration commit (circa 2026-04-23)
+3. Identify pre-migration Attentiq files (sacred — must preserve)
+4. Restore any Attentiq files overwritten by ONE THING content
+5. Remove any remaining ONE THING files from attentiq
+6. Commit & push restored state
+
+**Nothing was changed.** No files were modified, no commits were made.
+
+**Required follow-up:** This task must be re-run from the Attentiq company agent, or the CEO must add the current deploy key as a collaborator on nanocorp-hq/attentiq before re-running.
+
+---
+
+## Repository Findings - 2026-04-23 Email Lifecycle Audit Task
+
+- `DOCS.md` was present and remains the required first read before exploring the repo again.
+- The live email send paths in the checked-in app are:
+  - welcome email via `app/api/webhooks/stripe/route.ts` -> `lib/email/sendWelcomeEmail.ts` -> `emails/WelcomeEmail.tsx`
+  - daily action email via `app/api/cron/daily-email/route.ts` -> `lib/email/sendDailyAction.tsx` -> `emails/DailyActionEmail.tsx`
+  - weekly summary via `app/api/cron/weekly-email/route.ts` -> inline `resend.emails.send()` -> `emails/WeeklySummaryEmail.tsx`
+  - monthly clarity via `app/api/cron/monthly-email/route.ts` -> `lib/cron/email-cron.ts` -> `lib/email/sendMonthlyClarity.tsx` -> `emails/MonthlyClarityEmail.tsx`
+- `vercel.json` schedules `/api/cron/daily-email`, `/api/cron/weekly-email`, and `/api/cron/monthly-email` every 10 minutes.
+- Only `app/api/cron/daily-email/route.ts` exports both `GET` and `POST`.
+- `app/api/cron/weekly-email/route.ts` and `app/api/cron/monthly-email/route.ts` export `POST` only, while the checked-in `scripts/test-cron.sh` invokes all three cron routes with `GET`.
+- `User.timezone` is stored in `users.timezone` as nullable text in `prisma/schema.prisma`.
+- No checked-in onboarding, checkout, or webhook path writes `users.timezone`.
+- The welcome email and `app/welcome/page.tsx` both promise "tomorrow at 8:00 AM", but the daily cron has no `createdAt` or "next morning only" guard; it only checks local clock time plus prior-send state.
+- The current signup flow incidentally prevents same-day daily sends because new users are created without a timezone, but that also blocks all daily sends until timezone is populated elsewhere.
+- The daily email template includes `Done` / `Skip` tracking links and footer links to `/unsubscribe` and `/account`.
+- Weekly and monthly emails also include an unsubscribe link.
+- The current welcome email template does not include unsubscribe or manage-preferences links.
+- No checked-in `app/unsubscribe/*`, `app/api/unsubscribe/*`, or `app/account/*` route exists.
+- Stripe cancellation is handled by `customer.subscription.deleted`, which only updates `subscriptions.status` to `"canceled"`.
+- No cancellation confirmation email exists in the checked-in code.
+- Daily, weekly, and monthly sends all stop selecting canceled subscriptions because their user-loading logic only includes `subscription.status = "active"`.
+- Idempotency is soft only:
+  - no unique constraint exists on `daily_delivery_logs(user_id, local_date, type)`
+  - no weekly-specific unique send marker exists
+  - send markers are written after calling Resend, not before
+- `app/api/cron/process-send-queue/route.ts` and `app/api/webhooks/resend/route.ts` are still scaffold-only.
+- Static email-copy assets exist under `content/one-thing/email-templates/`, including `confirmation.html` / `confirmation.txt`, but they are not wired to any sender and are not live email paths.
+
+## Changes Made - 2026-04-23 Email Lifecycle Audit Task
+
+- Replaced `docs/email-lifecycle.md` with a code-backed audit covering:
+  - all sendable email types and their status
+  - first-email timing and the missing next-morning guard
+  - timezone storage and selection behavior
+  - unsubscribe flow gaps
+  - Stripe cancellation behavior
+  - cron schedule, window, and idempotency edge cases
+  - focused minimal recommendations
+
+## Verification Notes - 2026-04-23 Email Lifecycle Audit Task
+
+- Verification for this task was code inspection, not runtime delivery testing.
+- `npm run build` initially failed in `prebuild` because `node_modules/.bin/prisma` was missing in the checkout.
+- Restored local dependencies with `npm ci`.
+- `npm run build` then passed.
+- Key audited files were:
+  - `vercel.json`
+  - `prisma/schema.prisma`
+  - `app/api/checkout/route.ts`
+  - `app/api/webhooks/stripe/route.ts`
+  - `app/api/cron/daily-email/route.ts`
+  - `app/api/cron/weekly-email/route.ts`
+  - `app/api/cron/monthly-email/route.ts`
+  - `app/api/cron/process-send-queue/route.ts`
+  - `app/api/track/route.ts`
+  - `app/api/webhooks/resend/route.ts`
+  - `lib/cron/email-cron.ts`
+  - `lib/email/sendDailyAction.tsx`
+  - `lib/email/sendWelcomeEmail.ts`
+  - `lib/email/sendMonthlyClarity.tsx`
+  - `emails/DailyActionEmail.tsx`
+  - `emails/WeeklySummaryEmail.tsx`
+  - `emails/MonthlyClarityEmail.tsx`
+  - `emails/WelcomeEmail.tsx`
+
 ## Repository Findings - 2026-04-22 Next Config JS Swap Task
 
 - `DOCS.md` was present and remains the required first read before exploring the repo again.
@@ -1350,3 +1445,154 @@
 - `npm run build` then failed because the generated Prisma client was stale and did not include the current `DailyDeliveryStatus` exports used by the cron routes.
 - Regenerated the Prisma client successfully with `DIRECT_URL="$DATABASE_URL" npm run db:generate`.
 - `npm run build` passed after Prisma client regeneration.
+
+## Repository Findings - 2026-04-23 Email Lifecycle Audit Task
+
+- `DOCS.md` was present and remains the required first read before exploring the repo again.
+- `app/api/webhooks/stripe/route.ts` currently handles three Stripe webhook events:
+  - `checkout.session.completed`
+  - `customer.subscription.updated`
+  - `customer.subscription.deleted`
+- The checkout completion path upserts the `User`, `Subscription`, and `UserPreference`, sets subscription status to `active`, and sends a welcome email, but it does not write `users.timezone`.
+- `prisma/schema.prisma` defines `User.timezone` as nullable (`String?`) with no default.
+- `app/onboarding/page.tsx` and `app/api/checkout/route.ts` do not collect or pass timezone data into Stripe metadata, so there is no checked-in path that populates `users.timezone` during signup.
+- `vercel.json` schedules `/api/cron/daily-email` every 10 minutes.
+- `app/api/cron/daily-email/route.ts` only loads users whose `timezone` is non-null, whose preferences exist, and whose related subscription status is exactly `active`.
+- The daily cron's local-time filter is `hour === 8 && minute <= 10`, so the actual delivery window is 8:00-8:10 in the stored timezone, not a broader symmetric "+/- 10 minute" range.
+- The welcome email exists in the current codebase and is sent immediately after successful checkout, with subject `You're in. Your first action arrives tomorrow.` and body copy that promises the first action email tomorrow at 8:00 AM.
+- No checked-in `app/unsubscribe/*`, `app/api/unsubscribe/*`, or `app/account/*` route exists, even though the daily and welcome emails link to `/unsubscribe` and `/account`.
+- `app/api/webhooks/resend/route.ts` is scaffold-only and does not persist bounce or complaint events.
+- `lib/actions/selectActionForUser.ts` throws when no active action can be selected, and `app/api/cron/daily-email/route.ts` catches that failure per user and logs a failed send instead of aborting the whole cron run.
+
+## Changes Made - 2026-04-23 Email Lifecycle Audit Task
+
+- Added `docs/email-lifecycle.md` with a verified audit of:
+  - first-email timing after signup
+  - daily cron schedule and timezone behavior
+  - current welcome email behavior
+  - missing unsubscribe flow
+  - Stripe cancellation handling
+  - bounce, no-action, and missing-timezone edge cases
+- The new document includes a top summary table, section-level `Confirmed ✅` / `Gap ⚠️` labels, and exact code references for the confirmed behaviors.
+
+## Verification Notes - 2026-04-23 Email Lifecycle Audit Task
+
+- Verified the audit against the checked-in source files rather than assumptions:
+  - `app/api/webhooks/stripe/route.ts`
+  - `app/api/cron/daily-email/route.ts`
+  - `app/api/webhooks/resend/route.ts`
+  - `app/api/checkout/route.ts`
+  - `app/onboarding/page.tsx`
+  - `emails/DailyActionEmail.tsx`
+  - `emails/WelcomeEmail.tsx`
+  - `lib/email/sendWelcomeEmail.ts`
+  - `lib/actions/selectActionForUser.ts`
+  - `prisma/schema.prisma`
+  - `vercel.json`
+- No application logic was changed in this task; the work was documentation-only.
+
+## Repository Findings - 2026-04-23 Welcome Email Simplification Task
+
+- `DOCS.md` was present and remains the required first read before exploring the repo again.
+- The repo already contains all of the target files for this task:
+  - `emails/WelcomeEmail.tsx`
+  - `lib/email/sendWelcomeEmail.ts`
+  - `app/api/webhooks/stripe/route.ts`
+  - `app/checkout/success/page.tsx`
+  - `app/welcome/page.tsx`
+- The existing `emails/WelcomeEmail.tsx` is not a React Email component. It is a string-based HTML/text generator with extra setup copy, category listing, and footer links for unsubscribe/account management, so it does not match the new minimal spec.
+- The existing `lib/email/sendWelcomeEmail.ts` currently:
+  - accepts `{ email, categories }` instead of `(toEmail, toName?)`
+  - sends the subject `You're in. Your first action arrives tomorrow.`
+  - builds category labels, unsubscribe URLs, and text/html bodies that are no longer wanted for this task
+  - throws on send failure because it does not wrap the whole send in a non-throwing `try/catch`
+- `app/api/webhooks/stripe/route.ts` already sends a welcome email after the checkout database upsert, but it:
+  - extracts the email from `session.customer_email` rather than `session.customer_details.email`
+  - passes category data into the old sender shape
+  - wraps the send in an extra `try/catch` because the current sender can throw
+- A repo-wide search for subscription-management copy in app/email/lib code found one live UI instance:
+  - `app/welcome/page.tsx` renders a `/account` link labeled `Manage your subscription →`
+- `app/checkout/success/page.tsx` does not directly render subscription-management copy; it reads confirmation content from `content/one-thing/confirmation`.
+- The repo has React Email dependencies installed and already uses them in `emails/WeeklySummaryEmail.tsx` via `@react-email/components` and `@react-email/render`, so the welcome email can follow that established pattern.
+- The current shared sender convention is `EMAIL_FROM` from `lib/email/sender.ts`, which is a checked-in constant (`ONE THING <hello@onething.so>`), not a runtime env read.
+
+## Changes Made - 2026-04-23 Welcome Email Simplification Task
+
+- Replaced `emails/WelcomeEmail.tsx` with a React Email component that matches the new spec:
+  - subject constant `You're in.`
+  - exact body copy with no setup checklist, no categories, no CTA, and no footer links
+  - minimal white-background, system-font styling with near-black copy and a small slate accent on the closing line
+- Rewrote `lib/email/sendWelcomeEmail.ts` to the required non-throwing API:
+  - signature is now `sendWelcomeEmail(toEmail: string, toName?: string): Promise<void>`
+  - uses `resend.emails.send()`
+  - sends the `WelcomeEmail` React component directly
+  - uses `RESEND_FROM` or `EMAIL_FROM` if present, with fallback to the shared `EMAIL_FROM` constant
+  - wraps the entire send path in `try/catch` and logs failures instead of throwing
+- Updated `app/api/webhooks/stripe/route.ts` so `checkout.session.completed` now:
+  - reads the recipient email from `session.customer_details.email` first, with fallback to `session.customer_email`
+  - reads the optional recipient name from `session.customer_details.name`
+  - calls `await sendWelcomeEmail(email, name)` after the checkout database upsert
+  - relies on the sender's internal error handling so email failures no longer affect the webhook response
+- Updated `app/welcome/page.tsx` to remove the `/account` management link and replace it with the neutral line:
+  - `You can manage your subscription from any ONE THING email.`
+
+## Verification Notes - 2026-04-23 Welcome Email Simplification Task
+
+- Repo-wide search across `app`, `emails`, `lib`, and `content` confirmed there are no remaining live `Manage your subscription` links or Stripe portal references in application code; the only remaining subscription-management copy is the allowed neutral sentence in `app/welcome/page.tsx`.
+- `npm run lint` initially failed because this checkout did not have local dependencies installed and `eslint` was not available on `PATH`.
+- `npm run build` initially failed for the same reason because `prisma` was not available on `PATH`.
+- Restored local dependencies successfully with `npm ci`.
+- `npm run lint` passed after dependency restore.
+- `npm run build` passed after dependency restore.
+- The build still emits the pre-existing Next.js 16 warning that the checked-in `eslint` key in `next.config.js` is no longer supported, but the production build completed successfully.
+- The work was committed as `ab6c6b4` (`feat: welcome email on checkout.session.completed + disable manage subscription`) and pushed to `origin/main`.
+- After the required 90-second post-push wait, one deployment verification attempt was made with:
+  - `agent-browser open https://onestep.nanocorp.app && agent-browser wait --load networkidle && agent-browser get title && agent-browser get url`
+- That single verification attempt failed locally before navigation because Chrome is not installed for `agent-browser`:
+  - `Chrome not found. Run agent-browser install to download Chrome, or use --executable-path.`
+- No second deployment verification attempt was made.
+
+## Repository Findings - 2026-04-23 Attentiq to Onestep Migration Task
+
+- `DOCS.md` was present and was read first before exploring the repo again.
+- The checked-out repository is `nanocorp-hq/onestep` on branch `main` with remote `origin = git@github.com:nanocorp-hq/onestep.git`.
+- A direct clone attempt for the stated source repo failed:
+  - `git clone --branch main --single-branch git@github.com:nanocorp-hq/attentiq.git /home/worker/attentiq`
+  - GitHub returned `ERROR: Repository not found.`
+- An HTTP probe to `https://github.com/nanocorp-hq/attentiq` also returned `404`, so no reachable source-of-truth `attentiq` checkout was available from this environment during the task window.
+- The current `onestep` main tree already contains the requested ONE THING application structure, including the named files under:
+  - `app/`
+  - `components/`
+  - `emails/`
+  - `lib/`
+  - `prisma/`
+  - `scripts/`
+  - `docs/`
+  - `content/`
+- A direct existence audit confirmed all specifically required files from the task list are present and readable on `onestep` main except for a few path-name mismatches:
+  - missing exact path `app/tracked/layout.tsx`
+  - missing exact path `lib/email/sendDailyAction.ts`, with current tracked equivalent `lib/email/sendDailyAction.tsx`
+  - missing exact path `postcss.config.js`, with current tracked equivalent `postcss.config.mjs`
+  - no tracked `tailwind.config.ts` or `tailwind.config.js` in the current tree
+- Repo history confirms `lib/email/sendDailyAction.ts` previously existed and was later renamed to `lib/email/sendDailyAction.tsx`.
+- Repo history does not show any tracked `app/tracked/layout.tsx`, `tailwind.config.ts`, `tailwind.config.js`, or `postcss.config.js`.
+- Because the requested source repo was unreachable, unrecoverable files were not fabricated locally. The safe interpretation for this task was to preserve the verified `onestep` main tree, record the blocked source access, and avoid inventing source content that could corrupt the migration target.
+
+## Changes Made - 2026-04-23 Attentiq to Onestep Migration Task
+
+- Added this migration audit to `DOCS.md` documenting:
+  - the blocked `attentiq` clone/read attempt
+  - the current verified ONE THING file inventory on `onestep`
+  - the exact path-name mismatches between the task brief and the current tracked tree
+- No application source files were modified during this task because the stated source repository was unreachable and fabricating missing source files would have risked overwriting or inventing content.
+
+## Verification Notes - 2026-04-23 Attentiq to Onestep Migration Task
+
+- Verified the requested file inventory against the current `onestep` working tree with direct filesystem checks.
+- Verified repo history for the notable path mismatch cases:
+  - `lib/email/sendDailyAction.ts` exists in history and was renamed to `lib/email/sendDailyAction.tsx`
+  - `app/tracked/layout.tsx`, `tailwind.config.ts`, `tailwind.config.js`, and `postcss.config.js` do not appear in current repo history
+- Final verification for this task is repository-level:
+  - `git status --short --branch`
+  - `git ls-tree -r --name-only HEAD`
+  - direct path existence checks for the task's named files

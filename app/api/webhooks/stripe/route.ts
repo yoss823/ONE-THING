@@ -158,10 +158,13 @@ function normalizeSubscriptionStatus(status: Stripe.Subscription.Status): string
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const email = session.customer_email?.trim().toLowerCase();
+  const email =
+    session.customer_details?.email?.trim().toLowerCase() ||
+    session.customer_email?.trim().toLowerCase();
+  const name = session.customer_details?.name?.trim() || undefined;
 
   if (!email) {
-    throw new Error("checkout.session.completed is missing customer_email.");
+    throw new Error("checkout.session.completed is missing customer_details.email.");
   }
 
   const stripeCustomerId = getCustomerId(session.customer);
@@ -227,14 +230,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     },
   });
 
-  try {
-    await sendWelcomeEmail({
-      email,
-      categories,
-    });
-  } catch (error) {
-    console.error("Welcome email failed (non-blocking):", error);
-  }
+  await sendWelcomeEmail(email, name);
 
   console.log("New subscriber:", email);
 }

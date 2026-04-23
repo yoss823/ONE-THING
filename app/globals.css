@@ -40,3 +40,16 @@ a {
 ::selection {
   background: rgba(215, 92, 47, 0.22);
 }
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.email-card {
+  animation: fadeSlideUp 600ms ease-out 400ms both;
+}
+.email-line-1 { animation: fadeSlideUp 400ms ease-out 500ms both; }
+.email-line-2 { animation: fadeSlideUp 400ms ease-out 650ms both; }
+.email-line-3 { animation: fadeSlideUp 400ms ease-out 800ms both; }
+.email-line-4 { animation: fadeSlideUp 400ms ease-out 950ms both; }
