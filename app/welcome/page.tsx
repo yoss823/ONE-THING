@@ -1,163 +1,155 @@
-import Link from "next/link";
-import Stripe from "stripe";
+"use client";
 
-type WelcomePageProps = {
-  searchParams: Promise<{
-    session_id?: string | string[];
-  }>;
-};
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
-type WelcomeDetails = {
-  customerEmail: string;
+type OnboardingData = {
   categories: string[];
   energyLevel: string;
-  availableMinutes: string;
+  availableMinutes: number;
 };
 
-const ERROR_MESSAGE = "Something went wrong. Please contact support.";
-
-function getStripeClient(): Stripe {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-
-  if (!secretKey) {
-    throw new Error("STRIPE_SECRET_KEY is not configured.");
-  }
-
-  return new Stripe(secretKey);
-}
-
-function readSingleParam(value: string | string[] | undefined): string | null {
-  if (typeof value === "string" && value.trim()) {
-    return value.trim();
-  }
-
-  if (Array.isArray(value) && typeof value[0] === "string" && value[0].trim()) {
-    return value[0].trim();
-  }
-
-  return null;
-}
-
-function parseCategories(rawCategories: string | null | undefined): string[] {
-  if (!rawCategories) {
-    throw new Error("Checkout session is missing metadata.categories.");
-  }
-
-  let parsed: unknown;
-
+function readOnboardingData(): OnboardingData | null {
   try {
-    parsed = JSON.parse(rawCategories) as unknown;
+    const raw = localStorage.getItem("onboarding");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as OnboardingData;
+    if (!parsed || !Array.isArray(parsed.categories)) return null;
+    return parsed;
   } catch {
-    throw new Error("Checkout session metadata.categories is invalid JSON.");
+    return null;
   }
-
-  if (!Array.isArray(parsed)) {
-    throw new Error("Checkout session metadata.categories is not an array.");
-  }
-
-  const categories = parsed
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter(Boolean);
-
-  if (categories.length === 0) {
-    throw new Error("Checkout session metadata.categories is empty.");
-  }
-
-  return categories;
 }
 
-async function getWelcomeDetails(sessionId: string): Promise<WelcomeDetails> {
-  const stripe = getStripeClient();
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
+function WelcomeContent() {
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get("session_id");
 
-  const customerEmail =
-    session.customer_email?.trim() ?? session.customer_details?.email?.trim();
-  const categories = parseCategories(session.metadata?.categories);
-  const energyLevel = session.metadata?.energyLevel?.trim();
-  const availableMinutes = session.metadata?.availableMinutes?.trim();
-
-  if (!customerEmail || !energyLevel || !availableMinutes) {
-    throw new Error("Checkout session is missing confirmation details.");
+  let onboarding: OnboardingData | null = null;
+  if (typeof window !== "undefined") {
+    onboarding = readOnboardingData();
   }
 
-  return {
-    customerEmail,
-    categories,
-    energyLevel,
-    availableMinutes,
-  };
-}
-
-function ErrorState() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-6 py-16">
-      <div className="w-full max-w-[30rem]">
-        <div className="rounded-[2rem] border border-[rgba(16,34,23,0.1)] bg-white p-8 sm:p-10">
-          <p className="text-base leading-8 text-[var(--foreground-soft)]">{ERROR_MESSAGE}</p>
-        </div>
+    <main
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "4rem 1.5rem",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 480 }}>
+        <h1
+          style={{
+            fontSize: "2.5rem",
+            fontWeight: 700,
+            letterSpacing: "-0.03em",
+            lineHeight: 1,
+            color: "#111",
+            marginBottom: "1.5rem",
+          }}
+        >
+          You&apos;re in.
+        </h1>
+
+        <p
+          style={{
+            fontSize: "1rem",
+            lineHeight: 1.75,
+            color: "#555",
+            marginBottom: "1rem",
+          }}
+        >
+          Your first email arrives tomorrow at 8:00 AM. One thing. That&apos;s it.
+        </p>
+
+        <p
+          style={{
+            fontSize: "1rem",
+            lineHeight: 1.75,
+            color: "#555",
+            marginBottom: "2rem",
+          }}
+        >
+          We&apos;ll track what you complete and quietly adjust over time. No login
+          needed. Just open the email.
+        </p>
+
+        {onboarding && onboarding.categories.length > 0 && (
+          <div
+            style={{
+              border: "1px solid #e5e5e5",
+              borderRadius: "1rem",
+              backgroundColor: "#faf8f2",
+              padding: "1.25rem 1.5rem",
+              fontSize: "0.875rem",
+              lineHeight: 1.75,
+              color: "#555",
+              marginBottom: "2rem",
+            }}
+          >
+            <p>Your categories: {onboarding.categories.join(", ")}</p>
+            {onboarding.energyLevel && (
+              <p>Energy level: {onboarding.energyLevel}</p>
+            )}
+            {onboarding.availableMinutes != null && (
+              <p>Time available: {onboarding.availableMinutes} minutes</p>
+            )}
+          </div>
+        )}
+
+        {sessionId && (
+          <p
+            style={{
+              fontSize: "0.75rem",
+              color: "#aaa",
+              marginBottom: "1.5rem",
+            }}
+          >
+            Session: {sessionId}
+          </p>
+        )}
+
+        <p style={{ fontSize: "0.875rem", color: "#888" }}>
+          <a
+            href="/account"
+            style={{ color: "#555", textDecoration: "none" }}
+            onMouseOver={(e) =>
+              ((e.currentTarget as HTMLAnchorElement).style.color = "#111")
+            }
+            onMouseOut={(e) =>
+              ((e.currentTarget as HTMLAnchorElement).style.color = "#555")
+            }
+          >
+            Manage your subscription →
+          </a>
+        </p>
       </div>
     </main>
   );
 }
 
-export const runtime = "nodejs";
-
-export default async function WelcomePage({ searchParams }: WelcomePageProps) {
-  const params = await searchParams;
-  const sessionId = readSingleParam(params.session_id);
-
-  if (!sessionId) {
-    return <ErrorState />;
-  }
-
-  const welcomeDetails = await getWelcomeDetails(sessionId).catch((error) => {
-    console.error("Failed to render welcome page.", error);
-    return null;
-  });
-
-  if (!welcomeDetails) {
-    return <ErrorState />;
-  }
-
-  const { customerEmail, categories, energyLevel, availableMinutes } =
-    welcomeDetails;
-
+export default function WelcomePage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-6 py-16">
-      <div className="w-full max-w-[30rem]">
-        <section className="rounded-[2rem] border border-[rgba(16,34,23,0.1)] bg-white p-8 sm:p-10">
-          <h1
-            className="font-[var(--font-display)] text-4xl leading-none text-[var(--foreground)] sm:text-5xl"
-            style={{ letterSpacing: "-0.03em" }}
-          >
-            You&apos;re in.
-          </h1>
-
-          <p className="mt-6 whitespace-pre-line text-base leading-8 text-[var(--foreground-soft)]">
-            {"Your first email arrives tomorrow at 8:00 AM.\nOne thing. That's it.\n\nWe'll track what you complete and quietly adjust over time.\nNo login needed. Just open the email."}
-          </p>
-
-          <div className="mt-10 rounded-[1.5rem] border border-[rgba(16,34,23,0.08)] bg-[rgba(255,249,240,0.52)] px-5 py-5 text-sm leading-7 text-[var(--foreground-soft)] sm:px-6">
-            <p>Your categories: {categories.join(", ")}</p>
-            <p>Energy level: {energyLevel}</p>
-            <p>Time available: {availableMinutes} minutes</p>
-          </div>
-
-          <p className="mt-6 text-sm leading-7 text-[var(--foreground-soft)]">
-            Confirmation sent to: {customerEmail}
-          </p>
-
-          <p className="mt-10 text-sm text-[rgba(16,34,23,0.58)]">
-            <Link
-              href="/account"
-              className="transition-colors hover:text-[var(--foreground)]"
-            >
-              Manage your subscription →
-            </Link>
-          </p>
-        </section>
-      </div>
-    </main>
+    <Suspense
+      fallback={
+        <main
+          style={{
+            minHeight: "100vh",
+            backgroundColor: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <p style={{ color: "#888", fontSize: "0.875rem" }}>Loading…</p>
+        </main>
+      }
+    >
+      <WelcomeContent />
+    </Suspense>
   );
 }

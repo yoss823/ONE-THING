@@ -21,7 +21,7 @@ export default function Home() {
       {/* Hero */}
       <section className="px-6 pt-24 pb-20 max-w-2xl mx-auto">
         <h1
-          className="font-[var(--font-display)] text-5xl leading-[1.05] md:text-6xl"
+          className="font-[var(--font-display)] text-4xl sm:text-5xl leading-[1.05] md:text-6xl"
           style={{ letterSpacing: "-0.02em" }}
         >
           ONE THING — Stop deciding. Start doing.
@@ -33,9 +33,9 @@ export default function Home() {
         <div className="mt-10">
           <Link
             href="/onboarding"
-            className="inline-block bg-[#111] text-white text-sm font-medium px-7 py-3.5 rounded-full hover:bg-[#333] transition-colors"
+            className="inline-block bg-[#111] text-white text-base font-semibold px-8 py-4 rounded-full hover:bg-[#333] transition-colors"
           >
-            Start — choose your category
+            Pick your one thing
           </Link>
         </div>
       </section>
@@ -101,9 +101,9 @@ export default function Home() {
         <div className="mt-8">
           <Link
             href="/onboarding"
-            className="inline-block bg-[#111] text-white text-sm font-medium px-7 py-3.5 rounded-full hover:bg-[#333] transition-colors"
+            className="inline-block bg-[#111] text-white text-base font-semibold px-8 py-4 rounded-full hover:bg-[#333] transition-colors"
           >
-            Start — choose your category
+            Pick your one thing
           </Link>
         </div>
       </section>
@@ -113,7 +113,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="px-6 py-10 max-w-2xl mx-auto">
-        <p className="text-sm text-[#888]">ONE THING</p>
+        <p className="text-sm text-gray-400">ONE THING</p>
       </footer>
     </main>
   );
