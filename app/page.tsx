@@ -37,7 +37,7 @@ export default function Home() {
           <p className="text-sm text-stone-500 text-center mb-3">One decision. Tomorrow morning is handled.</p>
           <Link
             href="/onboarding"
-            className="inline-block bg-stone-900 text-white font-semibold px-8 py-4 text-lg rounded-none border border-stone-800 shadow-md hover:bg-stone-800 hover:text-white transition-colors duration-150"
+            className="inline-block bg-stone-900 text-white border-2 border-stone-900 shadow-lg text-lg font-semibold px-8 py-4 rounded-none hover:bg-white hover:text-stone-900 transition-colors duration-200 cursor-pointer"
           >
             Start tomorrow at 8:00 AM
           </Link>
@@ -122,7 +122,7 @@ export default function Home() {
           <p className="text-sm text-stone-500 text-center mb-3">One decision. Tomorrow morning is handled.</p>
           <Link
             href="/onboarding"
-            className="inline-block bg-stone-900 text-white font-semibold px-8 py-4 text-lg rounded-none border border-stone-800 shadow-md hover:bg-stone-800 hover:text-white transition-colors duration-150"
+            className="inline-block bg-stone-900 text-white border-2 border-stone-900 shadow-lg text-lg font-semibold px-8 py-4 rounded-none hover:bg-white hover:text-stone-900 transition-colors duration-200 cursor-pointer"
           >
             Start tomorrow at 8:00 AM
           </Link>
