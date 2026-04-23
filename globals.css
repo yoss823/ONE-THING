@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5efdf;
+  --background-strong: #efe4c8;
+  --foreground: #102217;
+  --foreground-soft: rgba(16, 34, 23, 0.74);
+  --panel: rgba(255, 251, 243, 0.74);
+  --panel-strong: #fff9f0;
+  --border: rgba(16, 34, 23, 0.14);
+  --accent: #d75c2f;
+  --accent-soft: #ff9a6f;
+  --shadow: 0 24px 80px rgba(16, 34, 23, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background:
+    radial-gradient(circle at top left, rgba(215, 92, 47, 0.16), transparent 28%),
+    radial-gradient(circle at 85% 15%, rgba(53, 94, 71, 0.12), transparent 24%),
+    linear-gradient(180deg, #f7f1e4 0%, #efe4c8 100%);
+  color: var(--foreground);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--foreground);
+  font-family: var(--font-body), sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(215, 92, 47, 0.22);
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.email-card {
+  animation: fadeSlideUp 600ms ease-out 400ms both;
+}
+.email-line-1 { animation: fadeSlideUp 400ms ease-out 500ms both; }
+.email-line-2 { animation: fadeSlideUp 400ms ease-out 650ms both; }
+.email-line-3 { animation: fadeSlideUp 400ms ease-out 800ms both; }
+.email-line-4 { animation: fadeSlideUp 400ms ease-out 950ms both; }
