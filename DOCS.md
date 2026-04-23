@@ -1,5 +1,144 @@
 # DOCS
 
+## Repository Findings - 2026-04-23 Commit File Audit Task
+
+- `DOCS.md` was present and was read before new exploration.
+- The working repo is `/home/worker/repo` with `origin` set to `git@github.com:nanocorp-hq/onestep.git`.
+- The requested commit hashes all exist in the local repo:
+  - `7b94c48b55b173463b52c583b4628b575ffd156c`
+  - `7e2df227919c34c85d0818ab2b6d058f9f7785d9`
+  - `bfe96420e39d1000ef6763f8cef8002062770006`
+  - `b082eca8dad195540944a5020a1e50f2f05817ac`
+  - `5904958e4b852d5c03f275d0032d5c915cf31088`
+  - `e649a7f5bc99277e2b70983ce978d7570a207686`
+- `git show --stat --name-status <hash>` confirmed these file-level changes:
+  - `7b94c48`: modifies `app/page.tsx`
+  - `7e2df22`: modifies `DOCS.md`, `app/api/cron/daily-email/route.ts`, `app/api/webhooks/stripe/route.ts`, `lib/actions/selectActionForUser.ts`; adds `app/api/unsubscribe/route.ts`, `app/unsubscribe/page.tsx`; renames `lib/email/sendDailyAction.tsx` to `lib/email/sendDailyAction.ts`
+  - `bfe9642`: modifies `DOCS.md` and `docs/deployment-audit.md`
+  - `b082eca`: modifies `DOCS.md` and `docs/deployment-audit.md`
+  - `5904958`: modifies `DOCS.md` and `docs/deployment-audit.md`
+  - `e649a7f`: modifies `DOCS.md` and `docs/deployment-audit.md`
+- The only non-add/modify status across the six commits is a pure rename in `7e2df22`:
+  - `lib/email/sendDailyAction.tsx` -> `lib/email/sendDailyAction.ts`
+
+## Changes Made - 2026-04-23 Commit File Audit Task
+
+- Added this audit record to `DOCS.md`.
+
+## Verification Notes - 2026-04-23 Commit File Audit Task
+
+- Verified each requested commit directly with `git show --stat --name-status`.
+- Read the corresponding patch bodies with `git show --unified=3` to derive brief per-file change descriptions from the actual hunks.
+
+## Repository Findings - 2026-04-23 Live Site E2E Verification Task
+
+- `DOCS.md` was present and remains the required first read before exploring the repo again.
+- `docs/deployment-audit.md` still identifies `https://onestep.nanocorp.app` as the production URL, and the live browser session matched that URL.
+- `nanocorp vercel env list` still does not include `STRIPE_SECRET_KEY`, so the production payment flow remains dependent on a founder-side Vercel env update.
+- Live browser verification on `https://onestep.nanocorp.app` showed:
+  - hero headline present: `ONE THING — Stop deciding. Start doing.`
+  - pricing present: `$4.99/month`, `$7.99/month`, `$9.99/month`
+  - GuidedChoice pills present and clickable
+  - demo email card rendered with the expected copy
+- The landing-page CTA had a real frontend contrast bug:
+  - background rendered black
+  - label text also rendered dark
+  - button remained clickable but was low-contrast and hard to read
+- Root cause of the CTA contrast bug:
+  - `app/globals.css` had a global `a { color: inherit; }` rule
+  - that rule overrode Tailwind `text-white` classes on CTA links
+- Live onboarding still works through all four steps:
+  - CTA click from landing page -> `/onboarding`
+  - step 1 category selection
+  - step 2 energy selection
+  - step 3 time selection
+  - step 4 email entry
+- The production checkout failure remains unchanged after the live browser run:
+  - after entering `test@example.com` and clicking `Continue to payment`, the page stayed on `/onboarding`
+  - inline UI error displayed: `Checkout is not configured.`
+  - `agent-browser` reported no console logs and no page errors
+  - direct live `POST /api/checkout` verification returned `503` with `{"error":"Checkout is not configured."}`
+
+## Changes Made - 2026-04-23 Live Site E2E Verification Task
+
+- Removed the global `a { color: inherit; }` rule from `app/globals.css` so CTA link text can use its intended Tailwind colors.
+- Updated `docs/deployment-audit.md` with the latest end-to-end live verification, the CTA contrast bug, and the remaining checkout blocker.
+
+## Verification Notes - 2026-04-23 Live Site E2E Verification Task
+
+- Installed Chrome locally with `agent-browser install` because this worker instance did not yet have a browser binary.
+- Browser-verified the production landing page and onboarding flow against `https://onestep.nanocorp.app`.
+- Confirmed step-1 price recalculation shows `$7.99/month` when exactly two categories are selected.
+- Confirmed the final live checkout failure is not a JS crash:
+  - no browser console output
+  - no page errors
+  - server returned a handled `503`
+- `npm ci` was required in this checkout before verification builds because `node_modules` was absent.
+- `npm run build` passed after dependency restore.
+- `npm run lint` passed.
+- Pushed commit `735c82a` (`fix: restore landing cta contrast`) to `origin/main`.
+- After the required 90-second wait, one post-push browser verification pass confirmed:
+  - the CTA contrast fix is live
+  - computed CTA text color is `rgb(255, 255, 255)`
+  - onboarding still works through the payment handoff step
+  - production checkout is still blocked by handled configuration error, not a frontend crash
+
+## Repository Findings - 2026-04-23 Vercel Env Vars Task
+
+- `DOCS.md` was present and remains the required first read before exploring the repo again.
+- `.env.example` and `docs/env-setup.md` define the checked-in Vercel env contract for this app.
+- `nanocorp vercel env list` currently exposes key names and targets only; it does not reveal secret values.
+- Current Vercel env keys present after inspection:
+  - `BUILD_CACHE_BUSTER`
+  - `APP_URL`
+  - `NEXT_PUBLIC_BASE_URL`
+  - `DATABASE_URL`
+  - `DIRECT_URL`
+  - `CRON_SECRET`
+  - `STRIPE_PRICE_ID_1CAT`
+  - `STRIPE_PRICE_ID_2CAT`
+  - `STRIPE_PRICE_ID_3CAT`
+- `DATABASE_URL` remains the only key present for `development`; the NanoCorp Vercel CLI still only exposes editable `production` and `preview` targets for normal env updates.
+- Missing from the checked-in env contract:
+  - `ADMIN_EXPORT_TOKEN`
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET`
+  - `STRIPE_BILLING_PORTAL_CONFIGURATION_ID`
+  - `RESEND_API_KEY`
+  - `RESEND_WEBHOOK_SECRET`
+  - `EMAIL_REPLY_TO`
+- The founder task checklist also mentions `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, but it is not documented in `.env.example` or `docs/env-setup.md`, and no checked-in source file references it.
+- No real Stripe or Resend secrets were found in:
+  - the repository
+  - the shell environment
+  - `nanocorp docs list` (which returned no company documents)
+  - the recent company emails available through `nanocorp emails`
+- `https://onestep.vercel.app` is not a safe base URL for this project; it responds with `308` redirecting to `/today`, so `https://onestep.nanocorp.app` remains the known canonical live URL from this environment.
+- `agent-browser` initially failed because Chrome was not installed locally.
+
+## Changes Made - 2026-04-23 Vercel Env Vars Task
+
+- Rotated `CRON_SECRET` in Vercel for `production` and `preview`.
+- Re-set `NEXT_PUBLIC_BASE_URL=https://onestep.nanocorp.app` in Vercel for `production` and `preview`.
+- Re-set `APP_URL=https://onestep.nanocorp.app` in Vercel for `production` and `preview`.
+- Updated `BUILD_CACHE_BUSTER` in Vercel to force the next deployment to rebuild against the current env state.
+- Installed Chrome locally with `agent-browser install` so browser-based verification can run in this environment.
+- Updated `docs/deployment-audit.md` with the current env inventory, applied changes, and the remaining credential blockers.
+
+## Verification Notes - 2026-04-23 Vercel Env Vars Task
+
+- `nanocorp vercel env set` reported `updated: 4`.
+- A follow-up `nanocorp vercel env list` confirmed the expected key inventory is still present after the update.
+- Pushed commit `5904958` to `origin/main` to trigger a fresh Vercel deployment after the env update.
+- Waited exactly 90 seconds, then ran one browser verification pass with `agent-browser`.
+- The live site loaded successfully at `https://onestep.nanocorp.app/` with title `ONE THING`.
+- `/onboarding` step transitions worked through category, energy, time, and email with no browser console output and no page errors reported by `agent-browser`.
+- The final `Continue to payment` action issued `POST https://onestep.nanocorp.app/api/checkout`, and the browser captured a `503` response instead of a Stripe Checkout URL.
+- The runtime result is consistent with `STRIPE_SECRET_KEY` still being absent from Vercel.
+
 ## Findings - 2026-04-23 Attentiq Audit & Restoration Task
 
 ### Result: BLOCKED — nanocorp-hq/attentiq is inaccessible from this environment
@@ -218,6 +357,34 @@
 - The relevant shipped routes for this audit are present in the repo:
   - landing page: `app/page.tsx`
   - onboarding page: `app/onboarding/page.tsx`
+
+## Repository Findings - 2026-04-23 Checkout Flow Fix Task
+
+- `DOCS.md` was present and was read before new exploration.
+- `app/api/webhooks/stripe/route.ts` upserts users after checkout but did not set `users.timezone`, despite `users.timezone` existing in `prisma/schema.prisma` and the daily cron filtering on `timezone IS NOT NULL`.
+- `app/api/cron/daily-email/route.ts` imports `@/lib/email/sendDailyAction` while the implementation file on disk was `lib/email/sendDailyAction.tsx`; the module has no JSX content.
+- No checked-in `app/unsubscribe/page.tsx` or `app/api/unsubscribe/route.ts` existed before this task.
+- `app/api/cron/daily-email/route.ts` already had a per-user `try/catch`, but `lib/actions/selectActionForUser.ts` still threw hard errors for:
+  - empty selected categories
+  - categories with no active actions in the database
+  - null selection results from the chooser
+- Email templates already link to `/unsubscribe`, so adding the page and redirecting API route is enough to stop 404s in V1.
+
+## Changes Made - 2026-04-23 Checkout Flow Fix Task
+
+- Updated `app/api/webhooks/stripe/route.ts` so checkout-created users now get `timezone: 'UTC'`, and existing users with `NULL` timezone are backfilled to `UTC` during the webhook without overwriting non-null timezones.
+- Renamed `lib/email/sendDailyAction.tsx` to `lib/email/sendDailyAction.ts` so the cron mailer module name now matches its non-JSX implementation.
+- Added `app/unsubscribe/page.tsx` as a minimal client-rendered unsubscribe confirmation page that reads the optional `email` query param.
+- Added `app/api/unsubscribe/route.ts` as a GET redirect endpoint that forwards `?email=...` to `/unsubscribe`.
+- Hardened `lib/actions/selectActionForUser.ts` so missing preferences, empty categories, missing category actions, and null chooser results now skip safely with warnings instead of throwing.
+- Updated `app/api/cron/daily-email/route.ts` so users with zero selected actions are skipped cleanly instead of sending malformed/empty emails.
+
+## Verification Notes - 2026-04-23 Checkout Flow Fix Task
+
+- `git grep -n "timezone"` now shows `app/api/webhooks/stripe/route.ts` setting `timezone: 'UTC'`.
+- Route files now exist at `app/unsubscribe/page.tsx` and `app/api/unsubscribe/route.ts`.
+- `npm run build` passed after restoring local dependencies with `npm ci`.
+- The first `npm run build` attempt failed before application build due missing local `prisma` CLI in `node_modules`; this was an environment issue in the checkout, not a code regression.
   - checkout route: `app/api/checkout/route.ts`
   - tracking route: `app/api/track/route.ts`
   - Stripe webhook route: `app/api/webhooks/stripe/route.ts`
@@ -1596,3 +1763,69 @@
   - `git status --short --branch`
   - `git ls-tree -r --name-only HEAD`
   - direct path existence checks for the task's named files
+
+## Repository Findings - 2026-04-23 Neon / Vercel Production Database Verification Task
+
+- `DOCS.md` was present and was read first before new exploration.
+- The shell environment exposes a live Neon `DATABASE_URL` pointing at:
+  - host `ep-tiny-sun-aemy249s.c-2.us-east-2.aws.neon.tech`
+  - database `neondb`
+  - `sslmode=require`
+- The shell environment does not expose `DIRECT_URL`, so local Prisma commands still require the fallback pattern:
+  - `DIRECT_URL="${DIRECT_URL:-$DATABASE_URL}"`
+- `nanocorp vercel env list` currently shows:
+  - `DATABASE_URL` for `production`, `preview`, and `development`
+  - `DIRECT_URL` for `production` and `preview`
+  - `BUILD_CACHE_BUSTER` for `production` and `preview`
+- Attempting to overwrite `DATABASE_URL` through `nanocorp vercel env set` fails with:
+  - `Cannot modify protected env var: DATABASE_URL`
+- That protected-write failure indicates the live project already has a platform-managed `DATABASE_URL`; the current task is not blocked by a missing key.
+- `DIRECT_URL="${DIRECT_URL:-$DATABASE_URL}" npx prisma migrate deploy` succeeded against Neon and reported:
+  - `3 migrations found`
+  - `No pending migrations to apply`
+- Direct SQL verification confirmed these tables exist in `public`:
+  - `_prisma_migrations`
+  - `actions`
+  - `adaptation_state`
+  - `daily_delivery_logs`
+  - `daily_sends`
+  - `subscriptions`
+  - `user_events`
+  - `user_preferences`
+  - `users`
+- The task brief's `ActionLog` table name does not exist literally in the checked-in schema; the current equivalent is `user_events` from Prisma model `UserEvent`.
+- Direct SQL row counts during this task were:
+  - `users`: `0`
+  - `actions`: `185`
+  - `user_events`: `0`
+  - `daily_delivery_logs`: `0`
+
+## Changes Made - 2026-04-23 Neon / Vercel Production Database Verification Task
+
+- Refreshed Vercel `DIRECT_URL` from the current Neon connection string for the targets exposed by the NanoCorp CLI:
+  - `production`
+  - `preview`
+- Updated Vercel `BUILD_CACHE_BUSTER` to force the next deployment to rebuild against the refreshed environment state.
+- Appended the current Neon/Vercel verification status to `docs/deployment-audit.md`.
+- Appended this task record to `DOCS.md`.
+- Installed Chrome locally with `agent-browser install` so the required one-pass post-push deployment check could run successfully.
+
+## Verification Notes - 2026-04-23 Neon / Vercel Production Database Verification Task
+
+- Verified shell database metadata without printing secrets by parsing `DATABASE_URL` in Python.
+- Verified current Vercel env-key coverage with `nanocorp vercel env list`.
+- Verified Prisma migration state with:
+  - `DIRECT_URL="${DIRECT_URL:-$DATABASE_URL}" npx prisma migrate deploy`
+- Verified the live Neon table inventory with:
+  - `psql "$DATABASE_URL" -At -c "select tablename from pg_tables where schemaname='public' order by tablename;"`
+- Verified representative table counts with:
+  - `psql "$DATABASE_URL" -At -c "select count(*) from users; select count(*) from actions; select count(*) from user_events; select count(*) from daily_delivery_logs;"`
+- Triggered a fresh Vercel deployment by pushing commit `bfe9642` to `main`.
+- Waited exactly 90 seconds after the push, then verified the live site with:
+  - `agent-browser open https://onestep.nanocorp.app && agent-browser wait --load networkidle && agent-browser get title && agent-browser get url`
+- The live deployment loaded successfully in `agent-browser`:
+  - title `ONE THING`
+  - url `https://onestep.nanocorp.app/`
+- Verified live production negative-path API responses:
+  - `POST /api/checkout` with an empty body returned HTTP `400` and body `{"error":"Invalid JSON body."}`
+  - `POST /api/webhooks/stripe` with no signature returned HTTP `400` and body `Missing Stripe signature header.`

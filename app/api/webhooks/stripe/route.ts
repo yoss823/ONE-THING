@@ -180,6 +180,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     create: {
       email,
       createdAt,
+      timezone: 'UTC',
       subscription: {
         create: {
           stripeCustomerId,
@@ -227,6 +228,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           },
         },
       },
+    },
+  });
+
+  await prisma.user.updateMany({
+    where: {
+      email,
+      timezone: null,
+    },
+    data: {
+      timezone: 'UTC',
     },
   });
 

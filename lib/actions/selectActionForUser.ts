@@ -158,16 +158,20 @@ export async function selectActionForUser(
   user: DailyEmailUser,
 ): Promise<SelectedUserAction[]> {
   if (!user.preference) {
-    throw new Error(`User ${user.id} is missing preferences.`);
+    console.warn(`Skipping daily action selection for user ${user.id}: missing preferences.`);
+    return [];
   }
 
-  if (user.preference.categories.length === 0) {
-    throw new Error(`User ${user.id} has no selected categories.`);
+  const categories = user.preference.categories.filter(Boolean);
+
+  if (categories.length === 0) {
+    console.warn(`Skipping daily action selection for user ${user.id}: no selected categories.`);
+    return [];
   }
 
   const selections: SelectedUserAction[] = [];
 
-  for (const category of user.preference.categories) {
+  for (const category of categories) {
     const actions = await prisma.action.findMany({
       where: {
         active: true,
@@ -190,7 +194,10 @@ export async function selectActionForUser(
           });
 
     if (fallbackPool.length === 0) {
-      throw new Error(`No active actions found for ${category}.`);
+      console.warn(
+        `Skipping category ${category} for user ${user.id}: no active actions found.`,
+      );
+      continue;
     }
 
     const sentById = new Map(
@@ -209,13 +216,19 @@ export async function selectActionForUser(
     );
 
     if (!selection) {
-      throw new Error(`Could not select an action for ${category}.`);
+      console.warn(
+        `Skipping category ${category} for user ${user.id}: selector returned no action.`,
+      );
+      continue;
     }
 
     const action = actionById.get(selection.action.id);
 
     if (!action) {
-      throw new Error(`Selected action ${selection.action.id} is missing from the pool.`);
+      console.warn(
+        `Skipping category ${category} for user ${user.id}: selected action ${selection.action.id} was not found in the pool.`,
+      );
+      continue;
     }
 
     selections.push({
@@ -224,10 +237,6 @@ export async function selectActionForUser(
       category,
       categoryLabel: CATEGORY_LABELS[category],
     });
-  }
-
-  if (selections.length === 0) {
-    throw new Error(`User ${user.id} has no actions available for delivery.`);
   }
 
   return selections;

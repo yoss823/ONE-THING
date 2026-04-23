@@ -1,4 +1,8 @@
-import { Prisma } from "@prisma/client";
+import {
+  DailyDeliveryType,
+  Prisma,
+  UserEventType,
+} from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import {
@@ -31,14 +35,13 @@ function isEightAM(timezone: string, now: Date): boolean {
       minute: "numeric",
       hour12: false,
     });
-
     const parts = formatter.formatToParts(now);
     const hour = Number.parseInt(
-      parts.find((p) => p.type === "hour")?.value ?? "",
+      parts.find((part) => part.type === "hour")?.value ?? "",
       10,
     );
     const minute = Number.parseInt(
-      parts.find((p) => p.type === "minute")?.value ?? "",
+      parts.find((part) => part.type === "minute")?.value ?? "",
       10,
     );
 
@@ -55,11 +58,10 @@ function getLocalDateKey(date: Date, timezone: string): string {
     month: "2-digit",
     day: "2-digit",
   });
-
   const parts = formatter.formatToParts(date);
-  const year = parts.find((p) => p.type === "year")?.value;
-  const month = parts.find((p) => p.type === "month")?.value;
-  const day = parts.find((p) => p.type === "day")?.value;
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
 
   if (!year || !month || !day) {
     throw new Error(`Could not format local date for timezone ${timezone}.`);
@@ -69,7 +71,8 @@ function getLocalDateKey(date: Date, timezone: string): string {
 }
 
 function getLocalDateValue(date: Date, timezone: string): Date {
-  return new Date(`${getLocalDateKey(date, timezone)}T00:00:00.000Z`);
+  const localDateKey = getLocalDateKey(date, timezone);
+  return new Date(`${localDateKey}T00:00:00.000Z`);
 }
 
 function formatEmailDate(date: Date, timezone: string): string {
@@ -82,7 +85,9 @@ function formatEmailDate(date: Date, timezone: string): string {
 }
 
 function hasSentLocalToday(user: DailyEmailUser, now: Date): boolean {
-  if (!user.timezone) return false;
+  if (!user.timezone) {
+    return false;
+  }
 
   const localDateKey = getLocalDateKey(now, user.timezone);
 
@@ -105,10 +110,12 @@ async function hasMonthlyClarityLocalToday(
   const monthlyLog = await prisma.dailyDeliveryLog.findFirst({
     where: {
       userId,
-      type: Prisma.DailyDeliveryType.MONTHLY_CLARITY,
+      type: DailyDeliveryType.MONTHLY_CLARITY,
       localDate,
     },
-    select: { id: true },
+    select: {
+      id: true,
+    },
   });
 
   return Boolean(monthlyLog);
@@ -133,11 +140,11 @@ async function logDelivery(
     return;
   }
 
-  const ops: Prisma.PrismaPromise<unknown>[] = [
+  const operations = [
     prisma.dailySend.createMany({
-      data: selections.map((s) => ({
+      data: selections.map((selection) => ({
         userId,
-        actionId: s.actionId,
+        actionId: selection.actionId,
         status,
         sentAt,
       })),
@@ -145,32 +152,31 @@ async function logDelivery(
   ];
 
   if (status === "sent" && localDate) {
-    ops.push(
+    operations.push(
       prisma.dailyDeliveryLog.createMany({
-        data: selections.map((s) => ({
+        data: selections.map((selection) => ({
           userId,
-          actionId: s.actionId,
-          type: Prisma.DailyDeliveryType.DAILY,
+          actionId: selection.actionId,
+          type: DailyDeliveryType.DAILY,
           status: Prisma.DailyDeliveryStatus.SENT,
           localDate,
           sentAt,
         })),
       }),
     );
-
-    ops.push(
+    operations.push(
       prisma.userEvent.createMany({
-        data: selections.map((s) => ({
+        data: selections.map((selection) => ({
           userId,
-          actionId: s.actionId,
-          eventType: Prisma.UserEventType.SENT,
+          actionId: selection.actionId,
+          eventType: UserEventType.SENT,
           createdAt: sentAt,
         })),
       }),
     );
   }
 
-  await prisma.$transaction(ops);
+  await prisma.$transaction(operations);
 }
 
 async function handleCron(request: Request) {
@@ -195,30 +201,34 @@ async function handleCron(request: Request) {
     baseUrl = getBaseUrl();
   } catch (error) {
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Base URL is not configured.",
-      },
+      { error: error instanceof Error ? error.message : "Base URL is not configured." },
       { status: 503 },
     );
   }
 
   const users = await prisma.user.findMany({
     where: {
-      timezone: { not: null },
-      preference: { isNot: null },
-      subscription: { is: { status: "active" } },
+      timezone: {
+        not: null,
+      },
+      preference: {
+        isNot: null,
+      },
+      subscription: {
+        is: {
+          status: "active",
+        },
+      },
     },
     include: dailyEmailUserInclude,
   });
-
   let sent = 0;
   let skippedMonthly = 0;
 
   for (const user of users) {
-    if (!user.timezone) continue;
+    if (!user.timezone) {
+      continue;
+    }
 
     let selections: SelectedUserAction[] = [];
 
@@ -236,27 +246,32 @@ async function handleCron(request: Request) {
 
       selections = await selectActionForUser(user);
 
+      if (selections.length === 0) {
+        console.warn(`Skipping daily email for user ${user.id}: no actions available.`);
+        continue;
+      }
+
       await sendDailyActionEmail({
         userEmail: user.email,
         userId: user.id,
         trackingBaseUrl: baseUrl,
         date: formatEmailDate(now, user.timezone),
-        categories: selections.map((s) => ({
-          name: s.categoryLabel,
-          action: s.actionText,
-          actionId: s.actionId,
+        categories: selections.map((selection) => ({
+          name: selection.categoryLabel,
+          action: selection.actionText,
+          actionId: selection.actionId,
         })),
       });
 
       await logDelivery(user.id, "sent", new Date(), selections, localDate);
       sent += 1;
-    } catch (err) {
-      console.error(`Failed to send daily email for user ${user.id}`, err);
+    } catch (error) {
+      console.error(`Failed to send daily email for user ${user.id}.`, error);
 
       try {
         await logDelivery(user.id, "failed", new Date(), selections);
-      } catch (logErr) {
-        console.error(`Failed to log failure for user ${user.id}`, logErr);
+      } catch (logError) {
+        console.error(`Failed to log daily email failure for user ${user.id}.`, logError);
       }
     }
   }
