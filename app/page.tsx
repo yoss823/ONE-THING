@@ -1,144 +1,142 @@
-"use client";
+import Link from "next/link";
+import GuidedChoice from "@/components/GuidedChoice";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+const categories = [
+  "Mental clarity",
+  "Organization",
+  "Health / Energy",
+  "Work / Business",
+  "Personal projects",
+  "Relationships",
+];
 
-type OnboardingData = {
-  categories: string[];
-  energyLevel: string;
-  availableMinutes: number;
-};
+const plans = [
+  { label: "1 category", price: "$4.99", period: "/month" },
+  { label: "2 categories", price: "$7.99", period: "/month" },
+  { label: "3 categories", price: "$9.99", period: "/month" },
+];
 
-function readOnboardingData(): OnboardingData | null {
-  try {
-    const raw = localStorage.getItem("onboarding");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as OnboardingData;
-    if (!parsed || !Array.isArray(parsed.categories)) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function WelcomeContent() {
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id");
-
-  let onboarding: OnboardingData | null = null;
-  if (typeof window !== "undefined") {
-    onboarding = readOnboardingData();
-  }
-
+export default function Home() {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#fff",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "4rem 1.5rem",
-      }}
-    >
-      <div style={{ width: "100%", maxWidth: 480 }}>
+    <main className="min-h-screen bg-white text-[#111]">
+      {/* Hero */}
+      <section className="px-6 pt-24 pb-20 max-w-2xl mx-auto">
         <h1
-          style={{
-            fontSize: "2.5rem",
-            fontWeight: 700,
-            letterSpacing: "-0.03em",
-            lineHeight: 1,
-            color: "#111",
-            marginBottom: "1.5rem",
-          }}
+          className="font-[var(--font-display)] text-4xl sm:text-5xl leading-[1.05] md:text-6xl"
+          style={{ letterSpacing: "-0.02em" }}
         >
-          You&apos;re in.
+          ONE THING — Stop deciding. Start doing.
         </h1>
-
-        <p
-          style={{
-            fontSize: "1rem",
-            lineHeight: 1.75,
-            color: "#555",
-            marginBottom: "1rem",
-          }}
-        >
-          Your first email arrives tomorrow at 8:00 AM. One thing. That&apos;s it.
+        <p className="mt-6 text-lg text-[#555] leading-relaxed">
+          One concrete action per morning. Per category you choose. Nothing
+          else.
         </p>
-
-        <p
-          style={{
-            fontSize: "1rem",
-            lineHeight: 1.75,
-            color: "#555",
-            marginBottom: "2rem",
-          }}
-        >
-          We&apos;ll track what you complete and quietly adjust over time. No login
-          needed. Just open the email.
-        </p>
-
-        {onboarding && onboarding.categories.length > 0 && (
-          <div
-            style={{
-              border: "1px solid #e5e5e5",
-              borderRadius: "1rem",
-              backgroundColor: "#faf8f2",
-              padding: "1.25rem 1.5rem",
-              fontSize: "0.875rem",
-              lineHeight: 1.75,
-              color: "#555",
-              marginBottom: "2rem",
-            }}
+        <div className="mt-10">
+          <p className="text-sm text-stone-400 text-center mb-2">Not sure this is for you?</p>
+          <GuidedChoice />
+          <p className="text-sm text-stone-500 text-center mb-3">One decision. Tomorrow morning is handled.</p>
+          <Link
+            href="/onboarding"
+            className="inline-block bg-stone-900 text-white font-semibold px-8 py-4 text-lg rounded-none border border-stone-800 shadow-md hover:bg-stone-800 hover:text-white transition-colors duration-150"
           >
-            <p>Your categories: {onboarding.categories.join(", ")}</p>
-            {onboarding.energyLevel && (
-              <p>Energy level: {onboarding.energyLevel}</p>
-            )}
-            {onboarding.availableMinutes != null && (
-              <p>Time available: {onboarding.availableMinutes} minutes</p>
-            )}
-          </div>
-        )}
+            Start tomorrow at 8:00 AM
+          </Link>
+          <p className="mt-3 text-sm text-gray-400">One email. One action. No login.</p>
+        </div>
+      </section>
 
-        {sessionId && (
-          <p
-            style={{
-              fontSize: "0.75rem",
-              color: "#aaa",
-              marginBottom: "1.5rem",
-            }}
-          >
-            Session: {sessionId}
-          </p>
-        )}
+      {/* Divider */}
+      <div className="border-t border-[#e5e5e5]" />
 
-        <p style={{ fontSize: "0.875rem", color: "#888" }}>
-          You can manage your subscription from any ONE THING email.
+      {/* Mini Demo */}
+      <section className="px-6 py-16 max-w-2xl mx-auto">
+        <p className="text-xs text-gray-400 mb-6 uppercase tracking-wide">What you receive every morning.</p>
+        <div className="email-card border border-gray-200 rounded-sm p-6 max-w-sm mx-auto font-mono text-sm bg-white">
+          <p className="email-line-1 text-xs text-gray-400 mb-4">Your one thing for Monday, May 5</p>
+          <p className="email-line-2 text-xs uppercase tracking-wide text-gray-500 mb-1">Health / Energy</p>
+          <p className="email-line-3 text-base text-gray-900 mb-4 font-serif italic">Do 10 slow deep breaths before opening your laptop.</p>
+          <p className="email-line-4 text-sm text-gray-500">✅ Done &nbsp;·&nbsp; ⏸ Skip for today</p>
+        </div>
+        <p className="text-xs text-gray-400 mt-4 text-center">That&apos;s it. Every morning at 8:00 AM.</p>
+      </section>
+
+      {/* Divider */}
+      <div className="border-t border-[#e5e5e5]" />
+
+      {/* How it works */}
+      <section className="px-6 py-16 max-w-2xl mx-auto">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-[#888] mb-6">
+          How it works
+        </h2>
+        <p className="text-xl leading-relaxed text-[#222]">
+          Every morning at 8:00 AM, one email.
+          <br />
+          One action. 5 to 15 minutes.
+          <br />
+          Done.
         </p>
-      </div>
+      </section>
+
+      {/* Divider */}
+      <div className="border-t border-[#e5e5e5]" />
+
+      {/* Categories */}
+      <section className="px-6 py-16 max-w-2xl mx-auto">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-[#888] mb-8">
+          Categories
+        </h2>
+        <ul className="space-y-3">
+          {categories.map((cat) => (
+            <li key={cat} className="text-lg text-[#222]">
+              {cat}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Divider */}
+      <div className="border-t border-[#e5e5e5]" />
+
+      {/* Pricing */}
+      <section className="px-6 py-16 max-w-2xl mx-auto">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-[#888] mb-8">
+          Pricing
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {plans.map((plan) => (
+            <div
+              key={plan.label}
+              className="border border-[#e5e5e5] rounded-2xl p-6"
+            >
+              <p className="text-sm text-[#555]">{plan.label}</p>
+              <p className="mt-3 font-[var(--font-display)] text-4xl leading-none">
+                {plan.price}
+                <span className="text-base font-normal text-[#888]">
+                  {plan.period}
+                </span>
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8">
+          <p className="text-sm text-stone-500 text-center mb-3">One decision. Tomorrow morning is handled.</p>
+          <Link
+            href="/onboarding"
+            className="inline-block bg-stone-900 text-white font-semibold px-8 py-4 text-lg rounded-none border border-stone-800 shadow-md hover:bg-stone-800 hover:text-white transition-colors duration-150"
+          >
+            Start tomorrow at 8:00 AM
+          </Link>
+          <p className="mt-3 text-sm text-gray-400">One email. One action. No login.</p>
+        </div>
+      </section>
+
+      {/* Divider */}
+      <div className="border-t border-[#e5e5e5]" />
+
+      {/* Footer */}
+      <footer className="px-6 py-10 max-w-2xl mx-auto">
+        <p className="text-sm text-gray-400">ONE THING</p>
+      </footer>
     </main>
-  );
-}
-
-export default function WelcomePage() {
-  return (
-    <Suspense
-      fallback={
-        <main
-          style={{
-            minHeight: "100vh",
-            backgroundColor: "#fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <p style={{ color: "#888", fontSize: "0.875rem" }}>Loading…</p>
-        </main>
-      }
-    >
-      <WelcomeContent />
-    </Suspense>
   );
 }
