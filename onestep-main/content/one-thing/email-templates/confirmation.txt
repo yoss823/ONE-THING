@@ -1,0 +1,13 @@
+Subject: ONE THING is scheduled
+Preheader: Confirm your setup so the first email arrives at 8:00 AM local time.
+
+Your {{plan_name}} plan is active.
+
+Finish setup:
+- Confirm your email address.
+- Choose up to three categories.
+- Set your timezone for 8:00 AM local delivery.
+
+Complete setup: {{setup_url}}
+
+If you did not start this subscription, reply to this email and support will review it.
