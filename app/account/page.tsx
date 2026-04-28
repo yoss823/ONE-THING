@@ -20,6 +20,7 @@ function AccountContent() {
   const [overview, setOverview] = useState<{
     planLabel: string;
     changesRemainingThisMonth: number;
+    currentThemes: string[];
     progress: {
       sentCount: number;
       completedCount: number;
@@ -28,6 +29,7 @@ function AccountContent() {
     };
   } | null>(null);
   const [isLoadingOverview, setIsLoadingOverview] = useState(false);
+  const [showThemeEditor, setShowThemeEditor] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -52,6 +54,14 @@ function AccountContent() {
     });
   }
 
+  function normalizeThemeValue(theme: string): string {
+    return theme.trim().toLowerCase();
+  }
+
+  function toThemeOptionValue(theme: string): string {
+    return normalizeThemeValue(theme).replaceAll("_", "_");
+  }
+
   useEffect(() => {
     let isMounted = true;
 
@@ -71,6 +81,7 @@ function AccountContent() {
           error?: string;
           planLabel?: string;
           changesRemainingThisMonth?: number;
+          currentThemes?: string[];
           progress?: {
             sentCount: number;
             completedCount: number;
@@ -79,7 +90,12 @@ function AccountContent() {
           };
         };
 
-        if (!response.ok || !data.planLabel || !data.progress) {
+        if (
+          !response.ok ||
+          !data.planLabel ||
+          !data.progress ||
+          !Array.isArray(data.currentThemes)
+        ) {
           if (isMounted) {
             setError(data.error ?? "Unable to load account overview.");
           }
@@ -87,11 +103,16 @@ function AccountContent() {
         }
 
         if (isMounted) {
+          const normalizedThemes = data.currentThemes.map((theme) =>
+            toThemeOptionValue(theme),
+          );
           setOverview({
             planLabel: data.planLabel,
             changesRemainingThisMonth: data.changesRemainingThisMonth ?? 0,
+            currentThemes: normalizedThemes,
             progress: data.progress,
           });
+          setSelected(normalizedThemes);
         }
       } catch {
         if (isMounted) {
@@ -250,32 +271,62 @@ function AccountContent() {
               </span>
             </p>
 
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {THEME_OPTIONS.map((theme) => {
-                const isSelected = selected.includes(theme.value);
-                return (
-                  <button
-                    key={theme.value}
-                    onClick={() => toggleTheme(theme.value)}
-                    className={`text-left px-5 py-4 border rounded-xl text-sm font-medium transition-colors ${
-                      isSelected
-                        ? "bg-[#111] text-white border-[#111]"
-                        : "bg-white text-[#111] border-[#ddd] hover:border-[#999]"
-                    }`}
-                  >
-                    {theme.label}
-                  </button>
-                );
-              })}
+            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+              <p className="text-sm text-[#222]">Would you like to change your themes?</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  onClick={() => setShowThemeEditor(true)}
+                  className={`px-5 py-2.5 text-sm rounded-full border transition-colors ${
+                    showThemeEditor
+                      ? "bg-[#111] text-white border-[#111]"
+                      : "bg-white text-[#111] border-[#ddd] hover:border-[#999]"
+                  }`}
+                >
+                  Yes, change themes
+                </button>
+                <button
+                  onClick={() => setShowThemeEditor(false)}
+                  className={`px-5 py-2.5 text-sm rounded-full border transition-colors ${
+                    !showThemeEditor
+                      ? "bg-[#111] text-white border-[#111]"
+                      : "bg-white text-[#111] border-[#ddd] hover:border-[#999]"
+                  }`}
+                >
+                  Not now
+                </button>
+              </div>
             </div>
 
-            <button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              className="mt-8 bg-[#111] text-white text-sm font-medium px-7 py-3.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Saving..." : "Save themes"}
-            </button>
+            {showThemeEditor ? (
+              <>
+                <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {THEME_OPTIONS.map((theme) => {
+                    const isSelected = selected.includes(theme.value);
+                    return (
+                      <button
+                        key={theme.value}
+                        onClick={() => toggleTheme(theme.value)}
+                        className={`text-left px-5 py-4 border rounded-xl text-sm font-medium transition-colors ${
+                          isSelected
+                            ? "bg-[#111] text-white border-[#111]"
+                            : "bg-white text-[#111] border-[#ddd] hover:border-[#999]"
+                        }`}
+                      >
+                        {theme.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
+                  className="mt-8 bg-[#111] text-white text-sm font-medium px-7 py-3.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? "Saving..." : "Save themes"}
+                </button>
+              </>
+            ) : null}
 
             {message ? <p className="mt-4 text-sm text-[#166534]">{message}</p> : null}
             {error ? <p className="mt-4 text-sm text-[#b42318]">{error}</p> : null}
