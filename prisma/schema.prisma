@@ -45,10 +45,21 @@ model User {
   dailySends      DailySend[]
   deliveryLogs    DailyDeliveryLog[]
   deliveryLocks   DeliveryWindowLock[]
+  preferenceChanges PreferenceChangeLog[]
   userEvents      UserEvent[]
   adaptationState AdaptationState?
 
   @@map("users")
+}
+
+model PreferenceChangeLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("preference_change_logs")
 }
 
 model DeliveryWindowLock {

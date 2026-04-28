@@ -404,6 +404,7 @@ export async function handleDailyEmailCron(
         userId: user.id,
         categories: user.preference.categories,
         energyLevel: user.preference.energyLevel,
+        availableMinutes: user.preference.availableMinutes,
       });
 
       if (selectedActions.length === 0) {
@@ -412,24 +413,42 @@ export async function handleDailyEmailCron(
         continue;
       }
 
-      const sentAt = new Date();
+      const sentActions: Array<{ actionId: string }> = [];
+      const dateLabel = formatDailyDateLabel(now, timezone);
 
-      await sendDailyActionEmail({
-        userEmail: user.email,
-        categories: selectedActions,
-        date: formatDailyDateLabel(now, timezone),
-        trackingBaseUrl: baseUrl,
-        userId: user.id,
-      });
+      for (const selectedAction of selectedActions) {
+        try {
+          await sendDailyActionEmail({
+            userEmail: user.email,
+            categories: [selectedAction],
+            date: dateLabel,
+            trackingBaseUrl: baseUrl,
+            userId: user.id,
+          });
+          sentActions.push({ actionId: selectedAction.actionId });
+        } catch (error) {
+          summary.errors.push({
+            userId: user.id,
+            message:
+              error instanceof Error
+                ? `Failed action ${selectedAction.actionId}: ${error.message}`
+                : `Failed action ${selectedAction.actionId}: Unknown error.`,
+          });
+        }
+      }
+
+      if (sentActions.length === 0) {
+        continue;
+      }
 
       await logDailySend({
         userId: user.id,
         localDate,
-        actions: selectedActions,
-        sentAt,
+        actions: sentActions,
+        sentAt: new Date(),
       });
 
-      summary.sent += 1;
+      summary.sent += sentActions.length;
     } catch (error) {
       summary.errors.push({
         userId: user.id,

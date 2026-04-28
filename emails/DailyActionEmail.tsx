@@ -71,7 +71,10 @@ function renderCategorySection(
 }
 
 export function generateDailyActionHtml(props: DailyActionEmailProps): string {
-  const accountUrl = buildAccountUrl(props.trackingBaseUrl, "/account");
+  const accountUrl = new URL(
+    `/account?userId=${encodeURIComponent(props.userId)}`,
+    props.trackingBaseUrl,
+  ).toString();
   const unsubscribeUrl = buildAccountUrl(props.trackingBaseUrl, "/unsubscribe");
   const categorySections = props.categories
     .map((category, index) => renderCategorySection(props, category, index))
@@ -100,7 +103,10 @@ export function generateDailyActionHtml(props: DailyActionEmailProps): string {
 export function generateDailyActionText(
   props: DailyActionEmailProps,
 ): string {
-  const accountUrl = buildAccountUrl(props.trackingBaseUrl, "/account");
+  const accountUrl = new URL(
+    `/account?userId=${encodeURIComponent(props.userId)}`,
+    props.trackingBaseUrl,
+  ).toString();
   const unsubscribeUrl = buildAccountUrl(props.trackingBaseUrl, "/unsubscribe");
 
   const sections = props.categories.map((category) => {

@@ -35,6 +35,7 @@ type SelectionParams = {
   userId: string;
   categories: ActionCategory[];
   energyLevel: number;
+  availableMinutes: number;
 };
 
 function getDefaultComplexity(energyLevel: number): ActionComplexity {
@@ -110,6 +111,7 @@ export async function selectDailyEmailActions({
   userId,
   categories,
   energyLevel,
+  availableMinutes,
 }: SelectionParams): Promise<SelectedDailyEmailAction[]> {
   const [recentLogs, actions] = await Promise.all([
     prisma.dailyDeliveryLog.findMany({
@@ -146,6 +148,7 @@ export async function selectDailyEmailActions({
         category: true,
         complexity: true,
         texture: true,
+        estimatedMinutes: true,
       },
       orderBy: [{ category: "asc" }, { id: "asc" }],
     }),
@@ -167,24 +170,27 @@ export async function selectDailyEmailActions({
       lastSentAtByActionId.set(log.actionId, log.sentAt);
     }
 
+    const categoryActions = actions.filter((action) => action.category === category);
+    const timeFilteredActions = categoryActions.filter(
+      (action) => action.estimatedMinutes <= availableMinutes,
+    );
+    const sourceActions =
+      timeFilteredActions.length > 0 ? timeFilteredActions : categoryActions;
     const candidates = buildActionCandidates(
-      actions.filter((action) => action.category === category),
+      sourceActions,
       lastSentAtByActionId,
     );
 
     if (candidates.length === 0) {
-      return [];
+      return;
     }
 
     const categoryState = buildCategoryState(defaultComplexity, categoryLogs);
     const selected = selectAction(candidates, categoryState)?.action ?? candidates[0];
-
-    return [
-      {
-        name: formatCategoryLabel(category),
-        action: selected.title,
-        actionId: selected.id,
-      },
-    ];
+    return [{
+      name: formatCategoryLabel(category),
+      action: selected.title,
+      actionId: selected.id,
+    }];
   });
 }
