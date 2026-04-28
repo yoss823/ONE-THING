@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5efdf;
-  --background-strong: #efe4c8;
-  --foreground: #102217;
-  --foreground-soft: rgba(16, 34, 23, 0.74);
-  --panel: rgba(255, 251, 243, 0.74);
-  --panel-strong: #fff9f0;
-  --border: rgba(16, 34, 23, 0.14);
-  --accent: #d75c2f;
-  --accent-soft: #ff9a6f;
-  --shadow: 0 24px 80px rgba(16, 34, 23, 0.12);
+  --background: #fafafa;
+  --background-strong: #f3f3f3;
+  --foreground: #121212;
+  --foreground-soft: #5f5f5f;
+  --panel: #ffffff;
+  --panel-strong: #ffffff;
+  --border: #e8e8e8;
+  --accent: #151515;
+  --accent-soft: #2d2d2d;
+  --shadow: 0 20px 48px rgba(16, 16, 16, 0.08);
 }
 
 * {
@@ -18,10 +18,7 @@
 }
 
 html {
-  background:
-    radial-gradient(circle at top left, rgba(215, 92, 47, 0.16), transparent 28%),
-    radial-gradient(circle at 85% 15%, rgba(53, 94, 71, 0.12), transparent 24%),
-    linear-gradient(180deg, #f7f1e4 0%, #efe4c8 100%);
+  background: var(--background);
   color: var(--foreground);
   scroll-behavior: smooth;
 }
@@ -34,7 +31,7 @@ body {
 }
 
 ::selection {
-  background: rgba(215, 92, 47, 0.22);
+  background: rgba(16, 16, 16, 0.12);
 }
 
 @keyframes fadeSlideUp {
@@ -44,6 +41,7 @@ body {
 
 .email-card {
   animation: fadeSlideUp 600ms ease-out 400ms both;
+  box-shadow: var(--shadow);
 }
 .email-line-1 { animation: fadeSlideUp 400ms ease-out 500ms both; }
 .email-line-2 { animation: fadeSlideUp 400ms ease-out 650ms both; }

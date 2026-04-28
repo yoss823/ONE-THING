@@ -23,6 +23,7 @@ export function generateMonthlyClarityHtml(
   props: MonthlyClarityEmailProps,
 ): string {
   const heading = props.isFirstMonth === false ? "Another month." : "One month in.";
+  const previewText = `${heading} ${props.completedCount} completed in ${props.monthName}.`;
   const greeting = props.userName
     ? `<p style="margin:0 0 16px;">${escapeHtml(props.userName)},</p>`
     : "";
@@ -32,8 +33,14 @@ export function generateMonthlyClarityHtml(
 
   return [
     "<!DOCTYPE html>",
-    '<html><body style="margin:0;background-color:#ffffff;color:#111111;font-family:system-ui,-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">',
-    '<div style="max-width:480px;margin:0 auto;padding:32px 20px;line-height:1.55;font-size:15px;">',
+    '<html lang="en"><head>',
+    '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+    "</head>",
+    '<body style="margin:0;padding:0;background-color:#ffffff;color:#111111;font-family:system-ui,-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">',
+    `<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;line-height:1px;color:transparent;">${escapeHtml(previewText)}</div>`,
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border-collapse:collapse;"><tr><td align="center" style="padding:32px 20px;">',
+    '<div style="max-width:480px;margin:0 auto;line-height:1.55;font-size:15px;">',
     greeting,
     `<p style="margin:0 0 24px;font-family:Georgia,'Times New Roman',serif;font-size:28px;font-style:italic;">${escapeHtml(heading)}</p>`,
     `<p style="margin:0 0 16px;">You completed ${props.completedCount} actions in ${escapeHtml(props.monthName)}. Skipped ${props.skippedCount}.</p>`,
@@ -45,7 +52,9 @@ export function generateMonthlyClarityHtml(
     "<p style=\"margin:0 0 24px;\">Back tomorrow with your next action.</p>",
     '<p style="margin:0 0 16px;color:#666666;">---</p>',
     `<p style="margin:0;"><a href="${escapeHtml(props.unsubscribeUrl)}" style="color:#111111;text-decoration:underline;">Unsubscribe</a></p>`,
-    "</div></body></html>",
+    "</div>",
+    "</td></tr></table>",
+    "</body></html>",
   ].join("");
 }
 
