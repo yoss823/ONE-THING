@@ -12,6 +12,23 @@ const THEME_OPTIONS = [
   { value: "relationships", label: "Relationships" },
 ];
 
+const ENERGY_OPTIONS = [
+  { value: 1, label: "Low" },
+  { value: 2, label: "Medium" },
+  { value: 3, label: "High" },
+];
+
+const TIME_OPTIONS = [5, 10, 15];
+
+const DB_THEME_TO_OPTION: Record<string, string> = {
+  MENTAL_CLARITY: "mental_clarity",
+  ORGANIZATION: "organization",
+  HEALTH_ENERGY: "health_energy",
+  WORK_BUSINESS: "work_business",
+  PERSONAL_PROJECTS: "personal_projects",
+  RELATIONSHIPS: "relationships",
+};
+
 function AccountContent() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId") ?? "";
@@ -27,10 +44,22 @@ function AccountContent() {
       skippedCount: number;
       completionRate: number;
     };
+    currentSettings: {
+      energyLevel: number;
+      availableMinutes: number;
+    };
+    recentActions: Array<{
+      sentAt: string;
+      status: string;
+      actionText: string;
+    }>;
   } | null>(null);
   const [isLoadingOverview, setIsLoadingOverview] = useState(false);
   const [showThemeEditor, setShowThemeEditor] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [energyLevel, setEnergyLevel] = useState<number>(2);
+  const [availableMinutes, setAvailableMinutes] = useState<number>(10);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -65,7 +94,9 @@ function AccountContent() {
   }
 
   function toThemeOptionValue(theme: string): string {
-    return normalizeThemeValue(theme).replaceAll("_", "_");
+    const normalized = normalizeThemeValue(theme);
+    const enumKey = theme.trim().toUpperCase();
+    return DB_THEME_TO_OPTION[enumKey] ?? normalized;
   }
 
   useEffect(() => {
@@ -88,6 +119,15 @@ function AccountContent() {
           planLabel?: string;
           changesRemainingThisMonth?: number;
           currentThemes?: string[];
+          currentSettings?: {
+            energyLevel: number;
+            availableMinutes: number;
+          };
+          recentActions?: Array<{
+            sentAt: string;
+            status: string;
+            actionText: string;
+          }>;
           progress?: {
             sentCount: number;
             completedCount: number;
@@ -100,7 +140,9 @@ function AccountContent() {
           !response.ok ||
           !data.planLabel ||
           !data.progress ||
-          !Array.isArray(data.currentThemes)
+          !Array.isArray(data.currentThemes) ||
+          !data.currentSettings ||
+          !Array.isArray(data.recentActions)
         ) {
           if (isMounted) {
             setError(data.error ?? "Unable to load account overview.");
@@ -117,8 +159,12 @@ function AccountContent() {
             changesRemainingThisMonth: data.changesRemainingThisMonth ?? 0,
             currentThemes: normalizedThemes,
             progress: data.progress,
+            currentSettings: data.currentSettings,
+            recentActions: data.recentActions,
           });
           setSelected(normalizedThemes);
+          setEnergyLevel(data.currentSettings.energyLevel);
+          setAvailableMinutes(data.currentSettings.availableMinutes);
         }
       } catch {
         if (isMounted) {
@@ -164,6 +210,60 @@ function AccountContent() {
     } finally {
       setIsResolvingAccess(false);
     }
+  }
+
+  async function handleSaveSettings() {
+    setError("");
+    setMessage("");
+    setIsSavingSettings(true);
+
+    try {
+      const response = await fetch("/api/account/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          energyLevel,
+          availableMinutes,
+        }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        energyLevel?: number;
+        availableMinutes?: number;
+      };
+
+      if (!response.ok) {
+        setError(data.error ?? "Unable to update settings.");
+        return;
+      }
+
+      setOverview((prev) =>
+        prev
+          ? {
+              ...prev,
+              currentSettings: {
+                energyLevel: data.energyLevel ?? energyLevel,
+                availableMinutes: data.availableMinutes ?? availableMinutes,
+              },
+            }
+          : prev,
+      );
+      setMessage("Settings updated.");
+    } catch {
+      setError("Unable to update settings.");
+    } finally {
+      setIsSavingSettings(false);
+    }
+  }
+
+  function formatRecentStatus(status: string): string {
+    if (status === "COMPLETED") return "Completed";
+    if (status === "SKIPPED") return "Skipped";
+    if (status === "SENT") return "Pending";
+    return status;
   }
 
   async function handleSubmit() {
@@ -276,6 +376,77 @@ function AccountContent() {
                 {isLoadingOverview ? "…" : overview?.changesRemainingThisMonth ?? 0}
               </span>
             </p>
+
+            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+              <p className="text-sm text-[#222]">Difficulty and time</p>
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-[#8b8b8b] mb-2">Difficulty</p>
+                  <div className="flex gap-2">
+                    {ENERGY_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setEnergyLevel(option.value)}
+                        className={`px-4 py-2 text-sm rounded-full border transition-colors ${
+                          energyLevel === option.value
+                            ? "bg-[#111] text-white border-[#111]"
+                            : "bg-white text-[#111] border-[#ddd] hover:border-[#999]"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-[#8b8b8b] mb-2">Time</p>
+                  <div className="flex gap-2">
+                    {TIME_OPTIONS.map((minutes) => (
+                      <button
+                        key={minutes}
+                        onClick={() => setAvailableMinutes(minutes)}
+                        className={`px-4 py-2 text-sm rounded-full border transition-colors ${
+                          availableMinutes === minutes
+                            ? "bg-[#111] text-white border-[#111]"
+                            : "bg-white text-[#111] border-[#ddd] hover:border-[#999]"
+                        }`}
+                      >
+                        {minutes} min
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleSaveSettings}
+                disabled={isSavingSettings}
+                className="mt-4 bg-[#111] text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {isSavingSettings ? "Saving..." : "Save settings"}
+              </button>
+            </div>
+
+            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+              <p className="text-sm text-[#222]">Recent actions</p>
+              <div className="mt-4 space-y-2">
+                {overview?.recentActions.length ? (
+                  overview.recentActions.map((entry, index) => (
+                    <div
+                      key={`${entry.sentAt}-${index}`}
+                      className="border border-[#efefef] rounded-lg px-3 py-2"
+                    >
+                      <p className="text-sm text-[#111]">{entry.actionText}</p>
+                      <p className="mt-1 text-xs text-[#777]">
+                        {new Date(entry.sentAt).toLocaleDateString()} ·{" "}
+                        {formatRecentStatus(entry.status)}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-[#777]">No recent actions yet.</p>
+                )}
+              </div>
+            </div>
 
             <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
               <p className="text-sm text-[#222]">Would you like to change your themes?</p>

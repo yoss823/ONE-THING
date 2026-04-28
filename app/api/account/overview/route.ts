@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
       preference: {
         select: {
           categories: true,
+          energyLevel: true,
+          availableMinutes: true,
         },
       },
       subscription: {
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
   const { start, end } = getMonthWindow(now);
-  const [deliveryLogs, changesUsedThisMonth] = await Promise.all([
+  const [deliveryLogs, changesUsedThisMonth, recentActions] = await Promise.all([
     prisma.dailyDeliveryLog.findMany({
       where: {
         userId,
@@ -68,6 +70,25 @@ export async function GET(request: NextRequest) {
         },
       },
     }),
+    prisma.dailyDeliveryLog.findMany({
+      where: {
+        userId,
+        type: DailyDeliveryType.DAILY,
+      },
+      select: {
+        sentAt: true,
+        status: true,
+        action: {
+          select: {
+            text: true,
+          },
+        },
+      },
+      orderBy: {
+        sentAt: "desc",
+      },
+      take: 14,
+    }),
   ]);
 
   const completedCount = deliveryLogs.filter(
@@ -85,6 +106,10 @@ export async function GET(request: NextRequest) {
     planLabel: PLAN_LABELS[user.subscription.plan] ?? user.subscription.plan,
     subscriptionStatus: user.subscription.status,
     currentThemes: user.preference.categories,
+    currentSettings: {
+      energyLevel: user.preference.energyLevel,
+      availableMinutes: user.preference.availableMinutes,
+    },
     changesUsedThisMonth,
     changesRemainingThisMonth: Math.max(0, 3 - changesUsedThisMonth),
     progress: {
@@ -93,5 +118,10 @@ export async function GET(request: NextRequest) {
       skippedCount,
       completionRate,
     },
+    recentActions: recentActions.map((entry) => ({
+      sentAt: entry.sentAt.toISOString(),
+      status: entry.status,
+      actionText: entry.action?.text ?? "No action found",
+    })),
   });
 }
