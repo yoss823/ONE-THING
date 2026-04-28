@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 const THEME_OPTIONS = [
@@ -12,7 +12,7 @@ const THEME_OPTIONS = [
   { value: "relationships", label: "Relationships" },
 ];
 
-export default function AccountPage() {
+function AccountContent() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId") ?? "";
   const [selected, setSelected] = useState<string[]>([]);
@@ -129,5 +129,21 @@ export default function AccountPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-white text-[#111] px-6 py-12">
+          <div className="max-w-xl mx-auto">
+            <p className="text-sm text-[#666]">Loading account...</p>
+          </div>
+        </main>
+      }
+    >
+      <AccountContent />
+    </Suspense>
   );
 }
