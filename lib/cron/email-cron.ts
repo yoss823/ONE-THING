@@ -52,6 +52,21 @@ type CronSummary = {
   errors: Array<{ userId: string; message: string }>;
 };
 
+type DailySkipReason =
+  | "missing_preference"
+  | "outside_send_window"
+  | "signup_day"
+  | "monthly_already_sent_today"
+  | "daily_already_sent_today"
+  | "daily_lock_exists"
+  | "no_actions_available";
+
+type MonthlySkipReason =
+  | "missing_preference"
+  | "outside_monthly_window"
+  | "monthly_already_sent_today"
+  | "monthly_lock_exists";
+
 function authorizeCron(request: Request): NextResponse | null {
   const authHeader = request.headers.get("authorization");
 
@@ -168,6 +183,21 @@ function buildDailySummary(): CronSummary {
     skippedNoActions: 0,
     errors: [],
   };
+}
+
+function logSkip(
+  kind: "daily" | "monthly_clarity",
+  userId: string,
+  reason: DailySkipReason | MonthlySkipReason,
+): void {
+  console.info(
+    JSON.stringify({
+      event: "cron_skip",
+      kind,
+      userId,
+      skipReason: reason,
+    }),
+  );
 }
 
 async function acquireDeliveryWindowLock(params: {
@@ -304,6 +334,7 @@ export async function handleDailyEmailCron(
     summary.evaluatedUsers += 1;
 
     if (!user.preference) {
+      logSkip("daily", user.id, "missing_preference");
       continue;
     }
 
@@ -311,6 +342,7 @@ export async function handleDailyEmailCron(
     const localSnapshot = getLocalTimeSnapshot(now, timezone);
 
     if (!isDueAtEightAm(localSnapshot)) {
+      logSkip("daily", user.id, "outside_send_window");
       continue;
     }
 
@@ -320,6 +352,7 @@ export async function handleDailyEmailCron(
     const signupLocalDate = getLocalDateValueFromInstant(user.createdAt, timezone);
 
     if (signupLocalDate >= localDate) {
+      logSkip("daily", user.id, "signup_day");
       continue;
     }
 
@@ -344,11 +377,13 @@ export async function handleDailyEmailCron(
 
     if (monthlyLog) {
       summary.skippedMonthly += 1;
+      logSkip("daily", user.id, "monthly_already_sent_today");
       continue;
     }
 
     if (existingDailyLog) {
       summary.skippedExisting += 1;
+      logSkip("daily", user.id, "daily_already_sent_today");
       continue;
     }
 
@@ -360,6 +395,7 @@ export async function handleDailyEmailCron(
 
     if (!lockAcquired) {
       summary.skippedLocked += 1;
+      logSkip("daily", user.id, "daily_lock_exists");
       continue;
     }
 
@@ -372,6 +408,7 @@ export async function handleDailyEmailCron(
 
       if (selectedActions.length === 0) {
         summary.skippedNoActions += 1;
+        logSkip("daily", user.id, "no_actions_available");
         continue;
       }
 
@@ -426,6 +463,7 @@ export async function handleMonthlyClarityEmailCron(
     summary.evaluatedUsers += 1;
 
     if (!user.preference) {
+      logSkip("monthly_clarity", user.id, "missing_preference");
       continue;
     }
 
@@ -433,6 +471,7 @@ export async function handleMonthlyClarityEmailCron(
     const localSnapshot = getLocalTimeSnapshot(now, timezone);
 
     if (localSnapshot.day !== 1 || !isDueAtEightAm(localSnapshot)) {
+      logSkip("monthly_clarity", user.id, "outside_monthly_window");
       continue;
     }
 
@@ -452,6 +491,7 @@ export async function handleMonthlyClarityEmailCron(
 
     if (existingMonthlyLog) {
       summary.skippedExisting += 1;
+      logSkip("monthly_clarity", user.id, "monthly_already_sent_today");
       continue;
     }
 
@@ -463,6 +503,7 @@ export async function handleMonthlyClarityEmailCron(
 
     if (!lockAcquired) {
       summary.skippedLocked += 1;
+      logSkip("monthly_clarity", user.id, "monthly_lock_exists");
       continue;
     }
 
