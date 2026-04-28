@@ -15,6 +15,8 @@ const THEME_OPTIONS = [
 function AccountContent() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId") ?? "";
+  const [email, setEmail] = useState("");
+  const [isResolvingAccess, setIsResolvingAccess] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -37,6 +39,34 @@ function AccountContent() {
 
       return [...prev, value];
     });
+  }
+
+  async function handleAccessLookup() {
+    setError("");
+    setMessage("");
+    setIsResolvingAccess(true);
+
+    try {
+      const response = await fetch("/api/account/access", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+      const data = (await response.json()) as { error?: string; accountUrl?: string };
+
+      if (!response.ok || !data.accountUrl) {
+        setError(data.error ?? "Unable to find your account.");
+        return;
+      }
+
+      window.location.assign(data.accountUrl);
+    } catch {
+      setError("Unable to find your account.");
+    } finally {
+      setIsResolvingAccess(false);
+    }
   }
 
   async function handleSubmit() {
@@ -91,9 +121,27 @@ function AccountContent() {
         </p>
 
         {!userId ? (
-          <p className="mt-6 text-sm text-[#b42318]">
-            Missing account link. Open this page from a ONE THING email.
-          </p>
+          <>
+            <p className="mt-6 text-sm text-[#666]">
+              Enter your subscription email to open your account.
+            </p>
+            <div className="mt-4">
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                className="w-full border border-[#ddd] rounded-xl px-5 py-4 text-sm text-[#111] placeholder-[#bbb] outline-none focus:border-[#999] transition-colors"
+              />
+            </div>
+            <button
+              onClick={handleAccessLookup}
+              disabled={!email || isResolvingAccess}
+              className="mt-4 bg-[#111] text-white text-sm font-medium px-7 py-3.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {isResolvingAccess ? "Opening..." : "Open my account"}
+            </button>
+          </>
         ) : (
           <>
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">

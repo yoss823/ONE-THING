@@ -195,7 +195,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const plan = derivePlan(categories.length);
   const createdAt = new Date();
 
-  await prisma.user.upsert({
+  const user = await prisma.user.upsert({
     where: { email },
     create: {
       email,
@@ -261,7 +261,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     },
   });
 
-  await sendWelcomeEmail(email, name);
+  await sendWelcomeEmail(email, name, user.id);
 
   console.log("New subscriber:", email);
 }

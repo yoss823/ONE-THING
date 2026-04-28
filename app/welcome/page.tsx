@@ -114,7 +114,7 @@ function WelcomeContent() {
         )}
 
         <p style={{ fontSize: "0.875rem", color: "#888" }}>
-          You can manage your subscription from any ONE THING email.
+          Manage your themes now at <a href="/account" style={{ color: "#111", textDecoration: "underline" }}>/account</a>.
         </p>
       </div>
     </main>

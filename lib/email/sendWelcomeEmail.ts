@@ -24,8 +24,17 @@ function getWelcomeEmailFrom(): string {
 export async function sendWelcomeEmail(
   toEmail: string,
   toName?: string,
+  userId?: string,
 ): Promise<void> {
   try {
+    const baseUrl = process.env.APP_URL?.trim() || process.env.NEXT_PUBLIC_BASE_URL?.trim();
+    const manageUrl =
+      baseUrl && userId
+        ? new URL(`/account?userId=${encodeURIComponent(userId)}`, baseUrl).toString()
+        : undefined;
+    const text = manageUrl
+      ? `${WELCOME_EMAIL_TEXT}\n\nManage your themes: ${manageUrl}`
+      : WELCOME_EMAIL_TEXT;
     const resend = getResendClient();
     const result = await resend.emails.send({
       from: getWelcomeEmailFrom(),
@@ -33,8 +42,9 @@ export async function sendWelcomeEmail(
       subject: WELCOME_EMAIL_SUBJECT,
       html: generateWelcomeEmailHtml({
         toName: toName?.trim() || undefined,
+        manageUrl,
       }),
-      text: WELCOME_EMAIL_TEXT,
+      text,
     });
 
     if (result.error) {

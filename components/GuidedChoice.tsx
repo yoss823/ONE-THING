@@ -29,7 +29,7 @@ export default function GuidedChoice() {
           <button
             key={choice.label}
             onClick={() => setSelected(i)}
-            className={`px-5 py-2.5 text-sm rounded-none cursor-pointer transition-colors ${
+            className={`px-5 py-2.5 text-sm rounded-xl cursor-pointer transition-colors ${
               selected === i
                 ? "border border-black bg-gray-100 text-[#111]"
                 : "border border-gray-200 text-gray-600 hover:border-gray-400"
@@ -48,7 +48,7 @@ export default function GuidedChoice() {
           <div className="mt-6">
             <Link
               href="/onboarding"
-              className="inline-block bg-black text-white font-semibold px-8 py-4 text-base rounded-none hover:bg-gray-900 transition-colors"
+              className="inline-block bg-[#121212] text-white border border-[#121212] text-base font-medium px-8 py-4 rounded-full hover:bg-[#2a2a2a] transition-colors duration-200"
             >
               Start tomorrow at 8:00 AM
             </Link>

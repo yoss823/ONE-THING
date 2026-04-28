@@ -1,5 +1,6 @@
 export interface WelcomeEmailProps {
   toName?: string;
+  manageUrl?: string;
 }
 
 export const WELCOME_EMAIL_SUBJECT = "You're in.";
@@ -23,10 +24,14 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
-export function generateWelcomeEmailHtml({ toName }: WelcomeEmailProps): string {
+export function generateWelcomeEmailHtml({ toName, manageUrl }: WelcomeEmailProps): string {
   const previewText = toName?.trim()
     ? `Thanks for joining ONE THING, ${toName.trim()}.`
     : "Thanks for joining ONE THING.";
+
+  const manageLine = manageUrl
+    ? `<p style="margin:24px 0 0;font-size:15px;line-height:1.7;"><a href="${escapeHtml(manageUrl)}" style="color:#111111;text-decoration:underline;">Manage your themes</a></p>`
+    : "";
 
   return [
     "<!DOCTYPE html>",
@@ -42,6 +47,7 @@ export function generateWelcomeEmailHtml({ toName }: WelcomeEmailProps): string 
     '<p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#111111;">Tomorrow at 8:00 AM, you&#39;ll receive your first single action.</p>',
     '<p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#111111;">One thing. That&#39;s all.</p>',
     '<p style="margin:0;font-size:15px;line-height:1.7;color:#475569;">You&#39;re set.</p>',
+    manageLine,
     "</div>",
     "</td></tr></table>",
     "</body></html>",
