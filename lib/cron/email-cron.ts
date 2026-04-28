@@ -27,6 +27,7 @@ type LocalTimeSnapshot = {
 type ActiveUser = {
   id: string;
   email: string;
+  createdAt: Date;
   timezone: string | null;
   preference: {
     categories: ActionCategory[];
@@ -118,6 +119,10 @@ function toLocalDateValue(snapshot: LocalTimeSnapshot): Date {
   return new Date(Date.UTC(snapshot.year, snapshot.month - 1, snapshot.day));
 }
 
+function getLocalDateValueFromInstant(instant: Date, timeZone: string): Date {
+  return toLocalDateValue(getLocalTimeSnapshot(instant, timeZone));
+}
+
 function subtractLocalDays(dateValue: Date, days: number): Date {
   const result = new Date(dateValue);
   result.setUTCDate(result.getUTCDate() - days);
@@ -167,6 +172,7 @@ async function loadActiveUsers(): Promise<ActiveUser[]> {
     select: {
       id: true,
       email: true,
+      createdAt: true,
       timezone: true,
       preference: {
         select: {
@@ -286,6 +292,12 @@ export async function handleDailyEmailCron(
     summary.dueUsers += 1;
 
     const localDate = toLocalDateValue(localSnapshot);
+    const signupLocalDate = getLocalDateValueFromInstant(user.createdAt, timezone);
+
+    if (signupLocalDate >= localDate) {
+      continue;
+    }
+
     const [monthlyLog, existingDailyLog] = await Promise.all([
       prisma.dailyDeliveryLog.findFirst({
         where: {

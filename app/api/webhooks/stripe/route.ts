@@ -107,6 +107,25 @@ function parseAvailableMinutes(rawAvailableMinutes: string | undefined): number 
   return availableMinutes;
 }
 
+function parseTimezone(rawTimezone: string | undefined): string {
+  if (!rawTimezone) {
+    return "UTC";
+  }
+
+  const timezone = rawTimezone.trim();
+
+  if (!timezone) {
+    return "UTC";
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+    return timezone;
+  } catch {
+    return "UTC";
+  }
+}
+
 function getCustomerId(customer: string | Stripe.Customer | Stripe.DeletedCustomer | null): string {
   if (typeof customer === "string") {
     return customer;
@@ -172,6 +191,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const categories = parseCategories(session.metadata?.categories);
   const energyLevel = parseEnergyLevel(session.metadata?.energyLevel);
   const availableMinutes = parseAvailableMinutes(session.metadata?.availableMinutes);
+  const timezone = parseTimezone(session.metadata?.timezone);
   const plan = derivePlan(categories.length);
   const createdAt = new Date();
 
@@ -180,7 +200,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     create: {
       email,
       createdAt,
-      timezone: 'UTC',
+      timezone,
       subscription: {
         create: {
           stripeCustomerId,
@@ -237,7 +257,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       timezone: null,
     },
     data: {
-      timezone: 'UTC',
+      timezone,
     },
   });
 

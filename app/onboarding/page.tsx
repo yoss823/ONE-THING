@@ -93,6 +93,7 @@ export default function OnboardingPage() {
           categories: selectedCategories,
           energyLevel: energy,
           availableMinutes: Number(time),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
         }),
       });
 

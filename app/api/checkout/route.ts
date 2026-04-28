@@ -9,6 +9,7 @@ type CheckoutRequestBody = {
   categories?: string[];
   energyLevel?: string;
   availableMinutes?: number;
+  timezone?: string;
 };
 
 function isValidEmail(email: string): boolean {
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { priceId, email, categories, energyLevel, availableMinutes } = body;
+  const { priceId, email, categories, energyLevel, availableMinutes, timezone } = body;
 
   if (!priceId || typeof priceId !== "string") {
     return NextResponse.json({ error: "priceId is required." }, { status: 400 });
@@ -46,6 +47,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "availableMinutes must be a positive number." }, { status: 400 });
   }
 
+  if (!timezone || typeof timezone !== "string") {
+    return NextResponse.json({ error: "timezone is required." }, { status: 400 });
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+  } catch {
+    return NextResponse.json({ error: "timezone is invalid." }, { status: 400 });
+  }
+
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
     return NextResponse.json({ error: "Checkout is not configured." }, { status: 503 });
@@ -64,6 +75,7 @@ export async function POST(request: Request) {
     categories: JSON.stringify(categories),
     energyLevel,
     availableMinutes: String(availableMinutes),
+    timezone,
   };
 
   try {
