@@ -114,19 +114,30 @@ export async function POST(request: Request) {
     );
   }
 
-  await prisma.$transaction([
-    prisma.userPreference.update({
-      where: { userId },
-      data: {
-        categories: mappedCategories,
+  try {
+    await prisma.$transaction([
+      prisma.userPreference.update({
+        where: { userId },
+        data: {
+          categories: mappedCategories,
+        },
+      }),
+      prisma.preferenceChangeLog.create({
+        data: {
+          userId,
+        },
+      }),
+    ]);
+  } catch (error) {
+    console.error("Failed to update account preferences.", error);
+    return NextResponse.json(
+      {
+        error:
+          "Preferences update is temporarily unavailable. Please contact support or try again later.",
       },
-    }),
-    prisma.preferenceChangeLog.create({
-      data: {
-        userId,
-      },
-    }),
-  ]);
+      { status: 503 },
+    );
+  }
 
   return NextResponse.json({
     ok: true,
