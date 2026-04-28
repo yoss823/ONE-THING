@@ -48,6 +48,16 @@ function AccountContent() {
       energyLevel: number;
       availableMinutes: number;
     };
+    monthlyMessage: string;
+    todayObjective: Array<{
+      actionText: string;
+      status: string;
+    }>;
+    latestCheckin: {
+      mood: string;
+      note?: string | null;
+      createdAt: string;
+    } | null;
     recentActions: Array<{
       sentAt: string;
       status: string;
@@ -60,6 +70,9 @@ function AccountContent() {
   const [energyLevel, setEnergyLevel] = useState<number>(2);
   const [availableMinutes, setAvailableMinutes] = useState<number>(10);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [checkinMood, setCheckinMood] = useState<string>("right");
+  const [checkinNote, setCheckinNote] = useState("");
+  const [isSavingCheckin, setIsSavingCheckin] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -128,6 +141,16 @@ function AccountContent() {
             status: string;
             actionText: string;
           }>;
+          monthlyMessage?: string;
+          todayObjective?: Array<{
+            actionText: string;
+            status: string;
+          }>;
+          latestCheckin?: {
+            mood: string;
+            note?: string | null;
+            createdAt: string;
+          } | null;
           progress?: {
             sentCount: number;
             completedCount: number;
@@ -142,7 +165,9 @@ function AccountContent() {
           !data.progress ||
           !Array.isArray(data.currentThemes) ||
           !data.currentSettings ||
-          !Array.isArray(data.recentActions)
+          !Array.isArray(data.recentActions) ||
+          !Array.isArray(data.todayObjective) ||
+          typeof data.monthlyMessage !== "string"
         ) {
           if (isMounted) {
             setError(data.error ?? "Unable to load account overview.");
@@ -161,6 +186,9 @@ function AccountContent() {
             progress: data.progress,
             currentSettings: data.currentSettings,
             recentActions: data.recentActions,
+            todayObjective: data.todayObjective,
+            monthlyMessage: data.monthlyMessage,
+            latestCheckin: data.latestCheckin ?? null,
           });
           setSelected(normalizedThemes);
           setEnergyLevel(data.currentSettings.energyLevel);
@@ -259,11 +287,63 @@ function AccountContent() {
     }
   }
 
+  async function handleSaveCheckin() {
+    setError("");
+    setMessage("");
+    setIsSavingCheckin(true);
+
+    try {
+      const response = await fetch("/api/account/checkin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          mood: checkinMood,
+          note: checkinNote,
+        }),
+      });
+      const data = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setError(data.error ?? "Unable to save check-in.");
+        return;
+      }
+
+      setOverview((prev) =>
+        prev
+          ? {
+              ...prev,
+              latestCheckin: {
+                mood: checkinMood,
+                note: checkinNote || null,
+                createdAt: new Date().toISOString(),
+              },
+            }
+          : prev,
+      );
+      setMessage("Check-in saved. Tomorrow's actions will adapt.");
+      setCheckinNote("");
+    } catch {
+      setError("Unable to save check-in.");
+    } finally {
+      setIsSavingCheckin(false);
+    }
+  }
+
   function formatRecentStatus(status: string): string {
     if (status === "COMPLETED") return "Completed";
     if (status === "SKIPPED") return "Skipped";
     if (status === "SENT") return "Pending";
     return status;
+  }
+
+  function formatMood(mood: string): string {
+    if (mood === "too_easy") return "Too easy";
+    if (mood === "too_hard") return "Too hard";
+    if (mood === "right") return "Just right";
+    return mood;
   }
 
   async function handleSubmit() {
@@ -378,6 +458,27 @@ function AccountContent() {
             </p>
 
             <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+              <p className="text-sm text-[#222]">Today's objective</p>
+              <div className="mt-3 space-y-2">
+                {overview?.todayObjective.length ? (
+                  overview.todayObjective.map((entry, index) => (
+                    <div key={`${entry.actionText}-${index}`} className="border border-[#efefef] rounded-lg px-3 py-2">
+                      <p className="text-sm text-[#111]">{entry.actionText}</p>
+                      <p className="mt-1 text-xs text-[#777]">{formatRecentStatus(entry.status)}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-[#777]">No objective sent yet today.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+              <p className="text-sm text-[#222]">Monthly recap</p>
+              <p className="mt-2 text-sm text-[#444]">{overview?.monthlyMessage ?? "Keep going."}</p>
+            </div>
+
+            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
               <p className="text-sm text-[#222]">Difficulty and time</p>
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -424,6 +525,49 @@ function AccountContent() {
               >
                 {isSavingSettings ? "Saving..." : "Save settings"}
               </button>
+            </div>
+
+            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+              <p className="text-sm text-[#222]">Coach check-in</p>
+              <p className="mt-2 text-xs text-[#777]">How did today's actions feel?</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {[
+                  { value: "too_easy", label: "Too easy" },
+                  { value: "right", label: "Just right" },
+                  { value: "too_hard", label: "Too hard" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setCheckinMood(option.value)}
+                    className={`px-4 py-2 text-sm rounded-full border transition-colors ${
+                      checkinMood === option.value
+                        ? "bg-[#111] text-white border-[#111]"
+                        : "bg-white text-[#111] border-[#ddd] hover:border-[#999]"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={checkinNote}
+                onChange={(event) => setCheckinNote(event.target.value)}
+                placeholder="Optional note (what to prioritize or avoid tomorrow)"
+                className="mt-3 w-full border border-[#ddd] rounded-xl px-4 py-3 text-sm text-[#111] placeholder-[#aaa] outline-none focus:border-[#999] transition-colors"
+                rows={3}
+              />
+              <button
+                onClick={handleSaveCheckin}
+                disabled={isSavingCheckin}
+                className="mt-3 bg-[#111] text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {isSavingCheckin ? "Saving..." : "Save check-in"}
+              </button>
+              {overview?.latestCheckin ? (
+                <p className="mt-3 text-xs text-[#666]">
+                  Last check-in: {formatMood(overview.latestCheckin.mood)}
+                </p>
+              ) : null}
             </div>
 
             <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">

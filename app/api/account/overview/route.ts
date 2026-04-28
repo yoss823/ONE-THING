@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
   const { start, end } = getMonthWindow(now);
-  const [deliveryLogs, changesUsedThisMonth, recentActions] = await Promise.all([
+  const [deliveryLogs, changesUsedThisMonth, recentActions, todayActions, recentCheckin] = await Promise.all([
     prisma.dailyDeliveryLog.findMany({
       where: {
         userId,
@@ -89,6 +89,36 @@ export async function GET(request: NextRequest) {
       },
       take: 14,
     }),
+    prisma.dailyDeliveryLog.findMany({
+      where: {
+        userId,
+        type: DailyDeliveryType.DAILY,
+        localDate: {
+          gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())),
+          lt: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)),
+        },
+      },
+      select: {
+        status: true,
+        action: {
+          select: {
+            text: true,
+          },
+        },
+      },
+      orderBy: {
+        sentAt: "desc",
+      },
+    }),
+    prisma.userCheckin.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        mood: true,
+        note: true,
+        createdAt: true,
+      },
+    }),
   ]);
 
   const completedCount = deliveryLogs.filter(
@@ -100,6 +130,13 @@ export async function GET(request: NextRequest) {
   const sentCount = deliveryLogs.length;
   const completionRate =
     sentCount > 0 ? Math.round((completedCount / sentCount) * 100) : 0;
+
+  const monthlyMessage =
+    completionRate >= 70
+      ? "Great consistency this month. Keep your rhythm."
+      : completionRate >= 40
+        ? "You're building momentum. Small steps still count."
+        : "A new month is a fresh start. Keep it simple and steady.";
 
   return NextResponse.json({
     ok: true,
@@ -118,10 +155,22 @@ export async function GET(request: NextRequest) {
       skippedCount,
       completionRate,
     },
+    monthlyMessage,
+    todayObjective: todayActions.map((entry) => ({
+      actionText: entry.action?.text ?? "No action found",
+      status: entry.status,
+    })),
     recentActions: recentActions.map((entry) => ({
       sentAt: entry.sentAt.toISOString(),
       status: entry.status,
       actionText: entry.action?.text ?? "No action found",
     })),
+    latestCheckin: recentCheckin
+      ? {
+          mood: recentCheckin.mood,
+          note: recentCheckin.note,
+          createdAt: recentCheckin.createdAt.toISOString(),
+        }
+      : null,
   });
 }

@@ -46,10 +46,23 @@ model User {
   deliveryLogs    DailyDeliveryLog[]
   deliveryLocks   DeliveryWindowLock[]
   preferenceChanges PreferenceChangeLog[]
+  checkins         UserCheckin[]
   userEvents      UserEvent[]
   adaptationState AdaptationState?
 
   @@map("users")
+}
+
+model UserCheckin {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  mood      String   @db.Text
+  note      String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("user_checkins")
 }
 
 model PreferenceChangeLog {
