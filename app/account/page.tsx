@@ -54,6 +54,12 @@ function AccountContent() {
     });
   }
 
+  function handleNotNow() {
+    setShowThemeEditor(false);
+    setError("");
+    setMessage("You're all set. Your current themes stay active.");
+  }
+
   function normalizeThemeValue(theme: string): string {
     return theme.trim().toLowerCase();
   }
@@ -285,7 +291,7 @@ function AccountContent() {
                   Yes, change themes
                 </button>
                 <button
-                  onClick={() => setShowThemeEditor(false)}
+                  onClick={handleNotNow}
                   className={`px-5 py-2.5 text-sm rounded-full border transition-colors ${
                     !showThemeEditor
                       ? "bg-[#111] text-white border-[#111]"
