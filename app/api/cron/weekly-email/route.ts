@@ -13,6 +13,10 @@ import { EMAIL_FROM } from "@/lib/email/sender";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+export async function GET(request: Request) {
+  return POST(request);
+}
+
 const SUMMARY_DAYS = 7;
 const TARGET_MINUTES = 8 * 60;
 const WINDOW_MINUTES = 10;
