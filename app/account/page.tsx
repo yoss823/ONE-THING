@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 const THEME_OPTIONS = [
@@ -17,6 +17,17 @@ function AccountContent() {
   const userId = searchParams.get("userId") ?? "";
   const [email, setEmail] = useState("");
   const [isResolvingAccess, setIsResolvingAccess] = useState(false);
+  const [overview, setOverview] = useState<{
+    planLabel: string;
+    changesRemainingThisMonth: number;
+    progress: {
+      sentCount: number;
+      completedCount: number;
+      skippedCount: number;
+      completionRate: number;
+    };
+  } | null>(null);
+  const [isLoadingOverview, setIsLoadingOverview] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -40,6 +51,65 @@ function AccountContent() {
       return [...prev, value];
     });
   }
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOverview() {
+      if (!userId) {
+        setOverview(null);
+        return;
+      }
+
+      setIsLoadingOverview(true);
+
+      try {
+        const response = await fetch(
+          `/api/account/overview?userId=${encodeURIComponent(userId)}`,
+        );
+        const data = (await response.json()) as {
+          error?: string;
+          planLabel?: string;
+          changesRemainingThisMonth?: number;
+          progress?: {
+            sentCount: number;
+            completedCount: number;
+            skippedCount: number;
+            completionRate: number;
+          };
+        };
+
+        if (!response.ok || !data.planLabel || !data.progress) {
+          if (isMounted) {
+            setError(data.error ?? "Unable to load account overview.");
+          }
+          return;
+        }
+
+        if (isMounted) {
+          setOverview({
+            planLabel: data.planLabel,
+            changesRemainingThisMonth: data.changesRemainingThisMonth ?? 0,
+            progress: data.progress,
+          });
+        }
+      } catch {
+        if (isMounted) {
+          setError("Unable to load account overview.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingOverview(false);
+        }
+      }
+    }
+
+    loadOverview();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userId]);
 
   async function handleAccessLookup() {
     setError("");
@@ -96,6 +166,14 @@ function AccountContent() {
         return;
       }
 
+      setOverview((prev) =>
+        prev
+          ? {
+              ...prev,
+              changesRemainingThisMonth: data.changesRemainingThisMonth ?? 0,
+            }
+          : prev,
+      );
       setMessage(
         `Themes updated. Changes remaining this month: ${data.changesRemainingThisMonth ?? 0}.`,
       );
@@ -144,6 +222,34 @@ function AccountContent() {
           </>
         ) : (
           <>
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="border border-[#e7e7e7] rounded-xl p-4 bg-white">
+                <p className="text-xs uppercase tracking-wide text-[#8b8b8b]">Plan</p>
+                <p className="mt-2 text-lg text-[#121212]">
+                  {isLoadingOverview ? "Loading..." : overview?.planLabel ?? "—"}
+                </p>
+              </div>
+              <div className="border border-[#e7e7e7] rounded-xl p-4 bg-white">
+                <p className="text-xs uppercase tracking-wide text-[#8b8b8b]">Completed</p>
+                <p className="mt-2 text-lg text-[#121212]">
+                  {isLoadingOverview ? "…" : overview?.progress.completedCount ?? 0}
+                </p>
+              </div>
+              <div className="border border-[#e7e7e7] rounded-xl p-4 bg-white">
+                <p className="text-xs uppercase tracking-wide text-[#8b8b8b]">Completion rate</p>
+                <p className="mt-2 text-lg text-[#121212]">
+                  {isLoadingOverview ? "…" : `${overview?.progress.completionRate ?? 0}%`}
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-4 text-sm text-[#666]">
+              Changes remaining this month:{" "}
+              <span className="font-medium text-[#111]">
+                {isLoadingOverview ? "…" : overview?.changesRemainingThisMonth ?? 0}
+              </span>
+            </p>
+
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {THEME_OPTIONS.map((theme) => {
                 const isSelected = selected.includes(theme.value);
