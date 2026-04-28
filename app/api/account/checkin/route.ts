@@ -40,13 +40,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 
-  await prisma.userCheckin.create({
-    data: {
-      userId,
-      mood,
-      note,
-    },
-  });
+  try {
+    await prisma.userCheckin.create({
+      data: {
+        userId,
+        mood,
+        note,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to save account check-in.", error);
+    return NextResponse.json(
+      { error: "Check-in is temporarily unavailable." },
+      { status: 503 },
+    );
+  }
 
   return NextResponse.json({ ok: true });
 }

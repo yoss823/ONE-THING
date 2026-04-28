@@ -58,13 +58,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Subscription is not active." }, { status: 403 });
   }
 
-  await prisma.userPreference.update({
-    where: { userId },
-    data: {
-      energyLevel: body.energyLevel,
-      availableMinutes: body.availableMinutes,
-    },
-  });
+  try {
+    await prisma.userPreference.update({
+      where: { userId },
+      data: {
+        energyLevel: body.energyLevel,
+        availableMinutes: body.availableMinutes,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to update account settings.", error);
+    return NextResponse.json(
+      { error: "Settings update is temporarily unavailable." },
+      { status: 503 },
+    );
+  }
 
   return NextResponse.json({
     ok: true,

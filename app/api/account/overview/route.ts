@@ -9,10 +9,32 @@ const PLAN_LABELS: Record<string, string> = {
   tier_3: "3 themes",
 };
 
+const CATEGORY_LABELS: Record<string, string> = {
+  MENTAL_CLARITY: "Mental clarity",
+  ORGANIZATION: "Organization",
+  HEALTH_ENERGY: "Health / Energy",
+  WORK_BUSINESS: "Work / Business",
+  PERSONAL_PROJECTS: "Personal projects",
+  RELATIONSHIPS: "Relationships",
+};
+
 function getMonthWindow(now: Date): { start: Date; end: Date } {
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   return { start, end };
+}
+
+function getLocalDateValue(date: Date, timezone: string): Date {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const day = Number(parts.find((part) => part.type === "day")?.value);
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
 export async function GET(request: NextRequest) {
@@ -32,6 +54,7 @@ export async function GET(request: NextRequest) {
           availableMinutes: true,
         },
       },
+      timezone: true,
       subscription: {
         select: {
           status: true,
@@ -47,6 +70,8 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
   const { start, end } = getMonthWindow(now);
+  const timezone = user.timezone ?? "UTC";
+  const localToday = getLocalDateValue(now, timezone);
   const [deliveryLogs, changesUsedThisMonth, recentActions, todayActions, recentCheckin] = await Promise.all([
     prisma.dailyDeliveryLog.findMany({
       where: {
@@ -81,6 +106,7 @@ export async function GET(request: NextRequest) {
         action: {
           select: {
             text: true,
+            category: true,
           },
         },
       },
@@ -94,8 +120,8 @@ export async function GET(request: NextRequest) {
         userId,
         type: DailyDeliveryType.DAILY,
         localDate: {
-          gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())),
-          lt: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)),
+          gte: localToday,
+          lt: new Date(localToday.getTime() + 24 * 60 * 60 * 1000),
         },
       },
       select: {
@@ -103,6 +129,7 @@ export async function GET(request: NextRequest) {
         action: {
           select: {
             text: true,
+            category: true,
           },
         },
       },
@@ -158,12 +185,18 @@ export async function GET(request: NextRequest) {
     monthlyMessage,
     todayObjective: todayActions.map((entry) => ({
       actionText: entry.action?.text ?? "No action found",
+      categoryLabel: entry.action?.category
+        ? CATEGORY_LABELS[String(entry.action.category)] ?? String(entry.action.category)
+        : "General",
       status: entry.status,
     })),
     recentActions: recentActions.map((entry) => ({
       sentAt: entry.sentAt.toISOString(),
       status: entry.status,
       actionText: entry.action?.text ?? "No action found",
+      categoryLabel: entry.action?.category
+        ? CATEGORY_LABELS[String(entry.action.category)] ?? String(entry.action.category)
+        : "General",
     })),
     latestCheckin: recentCheckin
       ? {

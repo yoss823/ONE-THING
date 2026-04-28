@@ -51,6 +51,7 @@ function AccountContent() {
     monthlyMessage: string;
     todayObjective: Array<{
       actionText: string;
+      categoryLabel: string;
       status: string;
     }>;
     latestCheckin: {
@@ -62,6 +63,7 @@ function AccountContent() {
       sentAt: string;
       status: string;
       actionText: string;
+      categoryLabel: string;
     }>;
   } | null>(null);
   const [isLoadingOverview, setIsLoadingOverview] = useState(false);
@@ -107,9 +109,8 @@ function AccountContent() {
   }
 
   function toThemeOptionValue(theme: string): string {
-    const normalized = normalizeThemeValue(theme);
     const enumKey = theme.trim().toUpperCase();
-    return DB_THEME_TO_OPTION[enumKey] ?? normalized;
+    return DB_THEME_TO_OPTION[enumKey] ?? normalizeThemeValue(theme);
   }
 
   useEffect(() => {
@@ -140,10 +141,12 @@ function AccountContent() {
             sentAt: string;
             status: string;
             actionText: string;
+            categoryLabel: string;
           }>;
           monthlyMessage?: string;
           todayObjective?: Array<{
             actionText: string;
+            categoryLabel: string;
             status: string;
           }>;
           latestCheckin?: {
@@ -463,6 +466,9 @@ function AccountContent() {
                 {overview?.todayObjective.length ? (
                   overview.todayObjective.map((entry, index) => (
                     <div key={`${entry.actionText}-${index}`} className="border border-[#efefef] rounded-lg px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-[#8b8b8b]">
+                        {entry.categoryLabel}
+                      </p>
                       <p className="text-sm text-[#111]">{entry.actionText}</p>
                       <p className="mt-1 text-xs text-[#777]">{formatRecentStatus(entry.status)}</p>
                     </div>
@@ -579,6 +585,9 @@ function AccountContent() {
                       key={`${entry.sentAt}-${index}`}
                       className="border border-[#efefef] rounded-lg px-3 py-2"
                     >
+                      <p className="text-xs uppercase tracking-wide text-[#8b8b8b]">
+                        {entry.categoryLabel}
+                      </p>
                       <p className="text-sm text-[#111]">{entry.actionText}</p>
                       <p className="mt-1 text-xs text-[#777]">
                         {new Date(entry.sentAt).toLocaleDateString()} ·{" "}
