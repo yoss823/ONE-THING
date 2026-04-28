@@ -1,6 +1,7 @@
 import {
   ActionCategory,
   DailyDeliveryType,
+  PrismaClientKnownRequestError,
   Prisma,
   UserEventType,
 } from "@prisma/client";
@@ -45,6 +46,7 @@ type CronSummary = {
   dueUsers: number;
   sent: number;
   skippedExisting: number;
+  skippedLocked: number;
   skippedMonthly: number;
   skippedNoActions: number;
   errors: Array<{ userId: string; message: string }>;
@@ -161,10 +163,33 @@ function buildDailySummary(): CronSummary {
     dueUsers: 0,
     sent: 0,
     skippedExisting: 0,
+    skippedLocked: 0,
     skippedMonthly: 0,
     skippedNoActions: 0,
     errors: [],
   };
+}
+
+async function acquireDeliveryWindowLock(params: {
+  userId: string;
+  type: DailyDeliveryType;
+  localDate: Date;
+}): Promise<boolean> {
+  try {
+    await prisma.deliveryWindowLock.create({
+      data: {
+        userId: params.userId,
+        type: params.type,
+        localDate: params.localDate,
+      },
+    });
+    return true;
+  } catch (error) {
+    if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+      return false;
+    }
+    throw error;
+  }
 }
 
 async function loadActiveUsers(): Promise<ActiveUser[]> {
@@ -327,6 +352,17 @@ export async function handleDailyEmailCron(
       continue;
     }
 
+    const lockAcquired = await acquireDeliveryWindowLock({
+      userId: user.id,
+      type: DailyDeliveryType.DAILY,
+      localDate,
+    });
+
+    if (!lockAcquired) {
+      summary.skippedLocked += 1;
+      continue;
+    }
+
     try {
       const selectedActions = await selectDailyEmailActions({
         userId: user.id,
@@ -416,6 +452,17 @@ export async function handleMonthlyClarityEmailCron(
 
     if (existingMonthlyLog) {
       summary.skippedExisting += 1;
+      continue;
+    }
+
+    const lockAcquired = await acquireDeliveryWindowLock({
+      userId: user.id,
+      type: DailyDeliveryType.MONTHLY_CLARITY,
+      localDate,
+    });
+
+    if (!lockAcquired) {
+      summary.skippedLocked += 1;
       continue;
     }
 

@@ -44,10 +44,24 @@ model User {
   preference      UserPreference?
   dailySends      DailySend[]
   deliveryLogs    DailyDeliveryLog[]
+  deliveryLocks   DeliveryWindowLock[]
   userEvents      UserEvent[]
   adaptationState AdaptationState?
 
   @@map("users")
+}
+
+model DeliveryWindowLock {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      DailyDeliveryType
+  localDate DateTime         @map("local_date") @db.Date
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, localDate])
+  @@index([type, localDate])
+  @@map("delivery_window_locks")
 }
 
 model Subscription {
