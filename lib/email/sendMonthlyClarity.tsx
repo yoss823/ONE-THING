@@ -1,8 +1,8 @@
 import { Resend } from "resend";
 
 import {
-  default as MonthlyClarityEmail,
   MonthlyClarityEmailProps,
+  generateMonthlyClarityHtml,
   generateMonthlyClarityText,
 } from "@/emails/MonthlyClarityEmail";
 import { EMAIL_FROM } from "@/lib/email/sender";
@@ -28,7 +28,7 @@ export async function sendMonthlyClarityEmail(
     from: EMAIL_FROM,
     to: params.userEmail,
     subject,
-    react: <MonthlyClarityEmail {...params} />,
+    html: generateMonthlyClarityHtml(params),
     text: generateMonthlyClarityText(params),
     replyTo,
   });

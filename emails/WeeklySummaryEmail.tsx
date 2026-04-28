@@ -1,16 +1,3 @@
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Link,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
-import { render } from "@react-email/render";
-
 export interface WeeklySummaryEmailProps {
   userName?: string;
   weekActions: Array<{
@@ -24,135 +11,55 @@ export interface WeeklySummaryEmailProps {
   unsubscribeUrl: string;
 }
 
-const statusIconByStatus: Record<
-  WeeklySummaryEmailProps["weekActions"][number]["status"],
-  string
-> = {
+const statusIconByStatus: Record<WeeklySummaryEmailProps["weekActions"][number]["status"], string> = {
   completed: "✅",
   skipped: "⏸",
   pending: "○",
 };
 
-function WeeklySummaryEmail({
-  userName,
-  weekActions,
-  completedCount,
-  skippedCount,
-  currentStreak,
-  unsubscribeUrl,
-}: WeeklySummaryEmailProps) {
-  const previewText = userName
-    ? `${userName}, here is your week in one email.`
-    : "Your week in one email.";
-
-  return (
-    <Html>
-      <Head />
-      <Preview>{previewText}</Preview>
-      <Body
-        style={{
-          margin: 0,
-          backgroundColor: "#ffffff",
-          color: "#111111",
-          fontFamily:
-            "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        }}
-      >
-        <Container
-          style={{
-            maxWidth: "480px",
-            margin: "0 auto",
-            padding: "32px 20px",
-          }}
-        >
-          <Heading
-            as="h1"
-            style={{
-              margin: "0 0 16px",
-              fontSize: "32px",
-              lineHeight: 1.15,
-              fontWeight: 700,
-            }}
-          >
-            Your week.
-          </Heading>
-
-          <Text
-            style={{
-              margin: "0 0 24px",
-              fontSize: "15px",
-              lineHeight: 1.6,
-            }}
-          >
-            {`✅ ${completedCount} completed · ⏸ ${skippedCount} skipped · 🔥 ${currentStreak}-day streak`}
-          </Text>
-
-          <Section style={{ margin: "0 0 24px" }}>
-            {weekActions.map((action, index) => (
-              <Section
-                key={`${action.date}-${index}`}
-                style={{
-                  padding: "12px 0",
-                  borderTop: index === 0 ? "1px solid #e5e5e5" : "none",
-                  borderBottom: "1px solid #e5e5e5",
-                }}
-              >
-                <Text
-                  style={{
-                    margin: "0 0 4px",
-                    fontSize: "13px",
-                    lineHeight: 1.4,
-                    color: "#666666",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  {action.date}
-                </Text>
-                <Text
-                  style={{
-                    margin: 0,
-                    fontSize: "15px",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  <span style={{ marginRight: "8px" }}>
-                    {statusIconByStatus[action.status]}
-                  </span>
-                  {action.actionTitle}
-                </Text>
-              </Section>
-            ))}
-          </Section>
-
-          <Text
-            style={{
-              margin: "0 0 24px",
-              fontSize: "15px",
-              lineHeight: 1.6,
-            }}
-          >
-            Keep going. One thing at a time.
-          </Text>
-
-          <Text style={{ margin: 0, fontSize: "14px", lineHeight: 1.6 }}>
-            <Link
-              href={unsubscribeUrl}
-              style={{ color: "#111111", textDecoration: "underline" }}
-            >
-              Unsubscribe
-            </Link>
-          </Text>
-        </Container>
-      </Body>
-    </Html>
-  );
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
-export async function generateWeeklySummaryHtml(
-  props: WeeklySummaryEmailProps,
-): Promise<string> {
-  return render(<WeeklySummaryEmail {...props} />);
+function renderWeekActions(weekActions: WeeklySummaryEmailProps["weekActions"]): string {
+  return weekActions
+    .map((action, index) => {
+      const topBorder = index === 0 ? "border-top:1px solid #e5e5e5;" : "";
+      return [
+        `<div style="padding:12px 0;${topBorder}border-bottom:1px solid #e5e5e5;">`,
+        `<p style="margin:0 0 4px;font-size:13px;line-height:1.4;color:#666666;text-transform:uppercase;letter-spacing:0.04em;">${escapeHtml(action.date)}</p>`,
+        `<p style="margin:0;font-size:15px;line-height:1.6;">${escapeHtml(statusIconByStatus[action.status])} ${escapeHtml(action.actionTitle)}</p>`,
+        "</div>",
+      ].join("");
+    })
+    .join("");
+}
+
+export function generateWeeklySummaryHtml(props: WeeklySummaryEmailProps): string {
+  const previewText = props.userName
+    ? `${props.userName}, here is your week in one email.`
+    : "Your week in one email.";
+  const summaryLine = `✅ ${props.completedCount} completed · ⏸ ${props.skippedCount} skipped · 🔥 ${props.currentStreak}-day streak`;
+
+  return [
+    "<!DOCTYPE html>",
+    "<html><head>",
+    `<meta name="description" content="${escapeHtml(previewText)}">`,
+    "</head>",
+    "<body style=\"margin:0;background-color:#ffffff;color:#111111;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;\">",
+    '<div style="max-width:480px;margin:0 auto;padding:32px 20px;">',
+    '<h1 style="margin:0 0 16px;font-size:32px;line-height:1.15;font-weight:700;">Your week.</h1>',
+    `<p style="margin:0 0 24px;font-size:15px;line-height:1.6;">${escapeHtml(summaryLine)}</p>`,
+    `<div style="margin:0 0 24px;">${renderWeekActions(props.weekActions)}</div>`,
+    '<p style="margin:0 0 24px;font-size:15px;line-height:1.6;">Keep going. One thing at a time.</p>',
+    `<p style="margin:0;font-size:14px;line-height:1.6;"><a href="${escapeHtml(props.unsubscribeUrl)}" style="color:#111111;text-decoration:underline;">Unsubscribe</a></p>`,
+    "</div></body></html>",
+  ].join("");
 }
 
 export function generateWeeklySummaryText(
@@ -174,5 +81,3 @@ export function generateWeeklySummaryText(
     `Unsubscribe: ${props.unsubscribeUrl}`,
   ].join("\n");
 }
-
-export default WeeklySummaryEmail;

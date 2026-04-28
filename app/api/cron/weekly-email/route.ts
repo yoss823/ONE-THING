@@ -129,7 +129,7 @@ export async function POST(request: Request) {
         unsubscribeUrl,
         ...summary,
       };
-      const html = await generateWeeklySummaryHtml(emailProps);
+      const html = generateWeeklySummaryHtml(emailProps);
       const text = generateWeeklySummaryText(emailProps);
       const result = await resend.emails.send({
         from: EMAIL_FROM,

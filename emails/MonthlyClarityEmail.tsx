@@ -10,90 +10,43 @@ export interface MonthlyClarityEmailProps {
   isFirstMonth?: boolean;
 }
 
-function MonthlyClarityEmail({
-  userName,
-  monthName,
-  completedCount,
-  skippedCount,
-  topCategory,
-  currentCategories,
-  upgradeUrl,
-  unsubscribeUrl,
-  isFirstMonth = true,
-}: MonthlyClarityEmailProps) {
-  return (
-    <html>
-      <body
-        style={{
-          margin: 0,
-          backgroundColor: "#ffffff",
-          color: "#111111",
-          fontFamily:
-            "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "480px",
-            margin: "0 auto",
-            padding: "32px 20px",
-            lineHeight: 1.55,
-            fontSize: "15px",
-          }}
-        >
-          {userName ? <p style={{ margin: "0 0 16px" }}>{userName},</p> : null}
-          <p
-            style={{
-              margin: "0 0 24px",
-              fontFamily: "Georgia, 'Times New Roman', serif",
-              fontSize: "28px",
-              fontStyle: "italic",
-            }}
-          >
-            {isFirstMonth ? "One month in." : "Another month."}
-          </p>
-          <p style={{ margin: "0 0 16px" }}>
-            You completed {completedCount} actions in {monthName}. Skipped{" "}
-            {skippedCount}.
-          </p>
-          <p style={{ margin: "0 0 16px" }}>
-            Your strongest area: {topCategory}.
-          </p>
-          <p style={{ margin: "0 0 16px" }}>
-            Current focus: {currentCategories.join(", ")}.
-          </p>
-          <p style={{ margin: "0 0 8px" }}>
-            Same categories for next month, or time to shift focus?
-          </p>
-          <p style={{ margin: "0 0 24px" }}>
-            Reply to this email if you&apos;d like to make a change.
-          </p>
-          {upgradeUrl ? (
-            <p style={{ margin: "0 0 24px" }}>
-              <a
-                href={upgradeUrl}
-                style={{ color: "#111111", textDecoration: "underline" }}
-              >
-                Ready to add another area? → Upgrade your plan
-              </a>
-            </p>
-          ) : null}
-          <p style={{ margin: "0 0 24px" }}>
-            Back tomorrow with your next action.
-          </p>
-          <p style={{ margin: "0 0 16px", color: "#666666" }}>---</p>
-          <p style={{ margin: 0 }}>
-            <a
-              href={unsubscribeUrl}
-              style={{ color: "#111111", textDecoration: "underline" }}
-            >
-              Unsubscribe
-            </a>
-          </p>
-        </div>
-      </body>
-    </html>
-  );
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+export function generateMonthlyClarityHtml(
+  props: MonthlyClarityEmailProps,
+): string {
+  const heading = props.isFirstMonth === false ? "Another month." : "One month in.";
+  const greeting = props.userName
+    ? `<p style="margin:0 0 16px;">${escapeHtml(props.userName)},</p>`
+    : "";
+  const upgrade = props.upgradeUrl
+    ? `<p style="margin:0 0 24px;"><a href="${escapeHtml(props.upgradeUrl)}" style="color:#111111;text-decoration:underline;">Ready to add another area? → Upgrade your plan</a></p>`
+    : "";
+
+  return [
+    "<!DOCTYPE html>",
+    '<html><body style="margin:0;background-color:#ffffff;color:#111111;font-family:system-ui,-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">',
+    '<div style="max-width:480px;margin:0 auto;padding:32px 20px;line-height:1.55;font-size:15px;">',
+    greeting,
+    `<p style="margin:0 0 24px;font-family:Georgia,'Times New Roman',serif;font-size:28px;font-style:italic;">${escapeHtml(heading)}</p>`,
+    `<p style="margin:0 0 16px;">You completed ${props.completedCount} actions in ${escapeHtml(props.monthName)}. Skipped ${props.skippedCount}.</p>`,
+    `<p style="margin:0 0 16px;">Your strongest area: ${escapeHtml(props.topCategory)}.</p>`,
+    `<p style="margin:0 0 16px;">Current focus: ${escapeHtml(props.currentCategories.join(", "))}.</p>`,
+    "<p style=\"margin:0 0 8px;\">Same categories for next month, or time to shift focus?</p>",
+    "<p style=\"margin:0 0 24px;\">Reply to this email if you'd like to make a change.</p>",
+    upgrade,
+    "<p style=\"margin:0 0 24px;\">Back tomorrow with your next action.</p>",
+    '<p style="margin:0 0 16px;color:#666666;">---</p>',
+    `<p style="margin:0;"><a href="${escapeHtml(props.unsubscribeUrl)}" style="color:#111111;text-decoration:underline;">Unsubscribe</a></p>`,
+    "</div></body></html>",
+  ].join("");
 }
 
 export function generateMonthlyClarityText(
@@ -120,5 +73,3 @@ export function generateMonthlyClarityText(
     .filter(Boolean)
     .join("\n");
 }
-
-export default MonthlyClarityEmail;

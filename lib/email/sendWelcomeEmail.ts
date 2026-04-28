@@ -1,7 +1,7 @@
-import { createElement } from "react";
 import { Resend } from "resend";
 
-import WelcomeEmail, {
+import {
+  generateWelcomeEmailHtml,
   WELCOME_EMAIL_SUBJECT,
   WELCOME_EMAIL_TEXT,
 } from "@/emails/WelcomeEmail";
@@ -31,7 +31,7 @@ export async function sendWelcomeEmail(
       from: getWelcomeEmailFrom(),
       to: toEmail,
       subject: WELCOME_EMAIL_SUBJECT,
-      react: createElement(WelcomeEmail, {
+      html: generateWelcomeEmailHtml({
         toName: toName?.trim() || undefined,
       }),
       text: WELCOME_EMAIL_TEXT,

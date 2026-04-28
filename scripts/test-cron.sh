@@ -16,13 +16,30 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Testing daily email cron..."
-curl -sS -H "Authorization: Bearer $CRON_SECRET" "$BASE_URL/api/cron/daily-email" | jq .
+run_cron_check() {
+  local label="$1"
+  local path="$2"
+
+  echo "Testing ${label} cron..."
+  local response
+  response="$(curl -sS -H "Authorization: Bearer $CRON_SECRET" "$BASE_URL${path}")"
+  echo "$response" | jq .
+
+  local has_error
+  has_error="$(echo "$response" | jq -r '(.error // empty) != ""')"
+  if [ "$has_error" = "true" ]; then
+    echo "❌ ${label} cron returned an error." >&2
+    exit 1
+  fi
+}
+
+run_cron_check "daily email" "/api/cron/daily-email"
 
 echo
-echo "Testing weekly email cron..."
-curl -sS -H "Authorization: Bearer $CRON_SECRET" "$BASE_URL/api/cron/weekly-email" | jq .
+run_cron_check "weekly email" "/api/cron/weekly-email"
 
 echo
-echo "Testing monthly email cron..."
-curl -sS -H "Authorization: Bearer $CRON_SECRET" "$BASE_URL/api/cron/monthly-email" | jq .
+run_cron_check "monthly email" "/api/cron/monthly-email"
+
+echo
+echo "✅ Cron checks completed without endpoint-level errors."
