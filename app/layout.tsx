@@ -3,6 +3,8 @@ import { Fraunces, IBM_Plex_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 
+import { LanguageBar } from "@/components/LanguageBar";
+
 const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
@@ -28,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${fraunces.variable} ${ibmPlexSans.variable}`}>
       <body>
+        <LanguageBar />
         <Script
           src="https://phospho-nanocorp-prod--nanocorp-api-fastapi-app.modal.run/beacon/snippet.js?s=onestep"
           defer

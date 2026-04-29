@@ -20,6 +20,12 @@ const ENERGY_OPTIONS = [
 
 const TIME_OPTIONS = [5, 10, 15];
 
+const LOCALE_OPTIONS = [
+  { value: "en", label: "English" },
+  { value: "fr", label: "Français" },
+  { value: "es", label: "Español" },
+];
+
 const DB_THEME_TO_OPTION: Record<string, string> = {
   MENTAL_CLARITY: "mental_clarity",
   ORGANIZATION: "organization",
@@ -48,6 +54,7 @@ function AccountContent() {
     currentSettings: {
       energyLevel: number;
       availableMinutes: number;
+      locale: string;
     };
     monthlyMessage: string;
     todayObjective: Array<{
@@ -72,6 +79,7 @@ function AccountContent() {
   const [selected, setSelected] = useState<string[]>([]);
   const [energyLevel, setEnergyLevel] = useState<number>(2);
   const [availableMinutes, setAvailableMinutes] = useState<number>(10);
+  const [locale, setLocale] = useState<string>("en");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [checkinMood, setCheckinMood] = useState<string>("right");
   const [checkinNote, setCheckinNote] = useState("");
@@ -139,6 +147,7 @@ function AccountContent() {
           currentSettings?: {
             energyLevel: number;
             availableMinutes: number;
+            locale?: string;
           };
           recentActions?: Array<{
             sentAt: string;
@@ -172,6 +181,7 @@ function AccountContent() {
           !data.progress ||
           !Array.isArray(data.currentThemes) ||
           !data.currentSettings ||
+          typeof data.currentSettings.locale !== "string" ||
           !Array.isArray(data.recentActions) ||
           !Array.isArray(data.todayObjective) ||
           typeof data.monthlyMessage !== "string"
@@ -201,6 +211,7 @@ function AccountContent() {
           setSelected(normalizedThemes);
           setEnergyLevel(data.currentSettings.energyLevel);
           setAvailableMinutes(data.currentSettings.availableMinutes);
+          setLocale(data.currentSettings.locale);
         }
       } catch {
         if (isMounted) {
@@ -263,12 +274,14 @@ function AccountContent() {
           userId,
           energyLevel,
           availableMinutes,
+          locale,
         }),
       });
       const data = (await response.json()) as {
         error?: string;
         energyLevel?: number;
         availableMinutes?: number;
+        locale?: string;
       };
 
       if (!response.ok) {
@@ -283,6 +296,7 @@ function AccountContent() {
               currentSettings: {
                 energyLevel: data.energyLevel ?? energyLevel,
                 availableMinutes: data.availableMinutes ?? availableMinutes,
+                locale: data.locale ?? locale,
               },
             }
           : prev,
@@ -596,6 +610,28 @@ function AccountContent() {
                     ))}
                   </div>
                 </div>
+              </div>
+              <div className="mt-6">
+                <p className="text-xs uppercase tracking-wide text-[#8b8b8b] mb-2">Language (emails)</p>
+                <div className="flex flex-wrap gap-2">
+                  {LOCALE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setLocale(option.value)}
+                      className={`px-4 py-2 text-sm rounded-full border transition-colors ${
+                        locale === option.value
+                          ? "bg-[#111] text-white border-[#111]"
+                          : "bg-white text-[#111] border-[#ddd] hover:border-[#999]"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-[#888]">
+                  Daily emails use this language for buttons and footer. Site copy stays English for now.
+                </p>
               </div>
               <button
                 onClick={handleSaveSettings}

@@ -35,6 +35,7 @@ type ActiveUser = {
     categories: ActionCategory[];
     energyLevel: number;
     availableMinutes: number;
+    locale: string;
   } | null;
   subscription: {
     plan: string;
@@ -234,6 +235,7 @@ async function loadActiveUsers(): Promise<ActiveUser[]> {
           categories: true,
           energyLevel: true,
           availableMinutes: true,
+          locale: true,
         },
       },
       subscription: {
@@ -426,6 +428,7 @@ export async function handleDailyEmailCron(
             date: dateLabel,
             trackingBaseUrl: baseUrl,
             userId: user.id,
+            locale: user.preference.locale,
           });
           sentActions.push({ actionId: selectedAction.actionId });
         } catch (error) {

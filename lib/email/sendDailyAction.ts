@@ -5,6 +5,8 @@ import {
   generateDailyActionHtml,
   generateDailyActionText,
 } from "@/emails/DailyActionEmail";
+import { getDailyEmailStrings } from "@/lib/i18n/daily-email";
+import { normalizeSiteLocale } from "@/lib/i18n/locale";
 import { getEmailFrom } from "@/lib/email/sender";
 
 function getResendClient(): Resend {
@@ -20,7 +22,8 @@ function getResendClient(): Resend {
 export async function sendDailyActionEmail(
   params: DailyActionEmailProps,
 ): Promise<void> {
-  const subject = `Your one thing for ${params.date}`;
+  const copy = getDailyEmailStrings(normalizeSiteLocale(params.locale));
+  const subject = `${copy.subjectPrefix} ${params.date}`;
   const resend = getResendClient();
 
   await resend.emails.send({

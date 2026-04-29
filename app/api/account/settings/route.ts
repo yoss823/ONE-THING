@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
+import { isSiteLocale } from "@/lib/i18n/locale";
 
 type UpdateSettingsBody = {
   userId?: string;
   energyLevel?: number;
   availableMinutes?: number;
+  locale?: string;
 };
 
 export async function POST(request: Request) {
@@ -34,6 +36,10 @@ export async function POST(request: Request) {
     );
   }
 
+  if (body.locale !== undefined && !isSiteLocale(body.locale)) {
+    return NextResponse.json({ error: "locale must be en, fr, or es." }, { status: 400 });
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -54,7 +60,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 
-  if (user.subscription.status !== "active") {
+  if (!["active", "trialing", "past_due"].includes(user.subscription.status.toLowerCase())) {
     return NextResponse.json({ error: "Subscription is not active." }, { status: 403 });
   }
 
@@ -64,6 +70,7 @@ export async function POST(request: Request) {
       data: {
         energyLevel: body.energyLevel,
         availableMinutes: body.availableMinutes,
+        ...(body.locale !== undefined ? { locale: body.locale } : {}),
       },
     });
   } catch (error) {
@@ -78,5 +85,6 @@ export async function POST(request: Request) {
     ok: true,
     energyLevel: body.energyLevel,
     availableMinutes: body.availableMinutes,
+    ...(body.locale !== undefined ? { locale: body.locale } : {}),
   });
 }

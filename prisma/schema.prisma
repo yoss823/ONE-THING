@@ -106,6 +106,7 @@ model UserPreference {
   categories       ActionCategory[]
   energyLevel      Int              @map("energy_level") @db.SmallInt
   availableMinutes Int              @map("available_minutes") @db.SmallInt
+  locale           String           @default("en") @map("locale") @db.Text
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preferences")

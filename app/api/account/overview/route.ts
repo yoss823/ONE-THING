@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
           categories: true,
           energyLevel: true,
           availableMinutes: true,
+          locale: true,
         },
       },
       timezone: true,
@@ -179,6 +180,7 @@ export async function GET(request: NextRequest) {
     currentSettings: {
       energyLevel: user.preference.energyLevel,
       availableMinutes: user.preference.availableMinutes,
+      locale: user.preference.locale,
     },
     changesUsedThisMonth,
     changesRemainingThisMonth: Math.max(0, 3 - changesUsedThisMonth),

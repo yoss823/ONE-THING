@@ -1,5 +1,10 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 import GuidedChoice from "@/components/GuidedChoice";
+import { getHomeSubscriberCta } from "@/lib/i18n/home-subscriber";
+import { normalizeSiteLocale } from "@/lib/i18n/locale";
+
+export const dynamic = "force-dynamic";
 
 const categories = [
   "Mental clarity",
@@ -16,7 +21,11 @@ const plans = [
   { label: "3 categories", price: "$9.99", period: "/month" },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const cookieLocale = cookies().get("onestep_locale")?.value;
+  const locale = normalizeSiteLocale(cookieLocale);
+  const subscriberCta = getHomeSubscriberCta(locale);
+
   return (
     <main className="min-h-screen bg-[#fafafa] text-[#121212]">
       {/* Hero */}
@@ -49,6 +58,17 @@ export default function Home() {
             Start tomorrow at 8:00 AM
           </Link>
           <p className="mt-3 text-sm text-[#8c8c8c]">One email. One action. No login.</p>
+        </div>
+
+        <div className="mt-14 rounded-2xl border border-[#e7e7e7] bg-white px-6 py-6 max-w-xl">
+          <p className="text-sm font-medium text-[#1a1a1a]">{subscriberCta.title}</p>
+          <p className="mt-2 text-sm text-[#666] leading-relaxed">{subscriberCta.description}</p>
+          <Link
+            href="/account"
+            className="mt-4 inline-block text-sm font-medium text-[#121212] underline underline-offset-4 hover:text-[#444]"
+          >
+            {subscriberCta.linkLabel}
+          </Link>
         </div>
       </section>
 
