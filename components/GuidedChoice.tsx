@@ -12,7 +12,14 @@ export type GuidedChoiceCopy = {
   ctaFootnote: string;
 };
 
-export default function GuidedChoice({ copy }: { copy: GuidedChoiceCopy }) {
+export default function GuidedChoice({
+  copy,
+  onboardingHref = "/onboarding",
+}: {
+  copy: GuidedChoiceCopy;
+  /** Include `?lang=` so the rest of the funnel stays in the chosen language. */
+  onboardingHref?: string;
+}) {
   const [selected, setSelected] = useState<number | null>(null);
 
   return (
@@ -40,7 +47,7 @@ export default function GuidedChoice({ copy }: { copy: GuidedChoiceCopy }) {
           <p className="text-base text-[#222] leading-relaxed">{copy.choices[selected].response}</p>
           <div className="mt-6">
             <Link
-              href="/onboarding"
+              href={onboardingHref}
               className="inline-block bg-[#121212] text-white border border-[#121212] text-base font-medium px-8 py-4 rounded-full hover:bg-[#2a2a2a] transition-colors"
             >
               {copy.ctaPrimary}

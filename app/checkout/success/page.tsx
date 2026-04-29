@@ -1,9 +1,24 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 
-import { confirmationMessagingContent } from "@/content/one-thing/confirmation";
+import { getCheckoutSuccessCopy } from "@/lib/i18n/checkout-success-page";
+import type { SiteLocale } from "@/lib/i18n/locale";
+import { normalizeSiteLocale } from "@/lib/i18n/locale";
 
-export default function CheckoutSuccessPage() {
-  const { successPage } = confirmationMessagingContent;
+type Search = { [key: string]: string | string[] | undefined };
+
+export default async function CheckoutSuccessPage({
+  searchParams,
+}: {
+  searchParams: Promise<Search>;
+}) {
+  const sp = await searchParams;
+  const langParam = typeof sp.lang === "string" ? sp.lang : undefined;
+  const cookieStore = await cookies();
+  const locale: SiteLocale = normalizeSiteLocale(
+    langParam ?? cookieStore.get("onestep_locale")?.value,
+  );
+  const successPage = getCheckoutSuccessCopy(locale);
 
   return (
     <main className="px-4 py-4 sm:px-6 sm:py-6">
@@ -37,9 +52,7 @@ export default function CheckoutSuccessPage() {
           </article>
 
           <article className="rounded-[2rem] border border-[rgba(24,38,29,0.08)] bg-[rgba(255,249,240,0.88)] p-8 shadow-[var(--shadow)] md:p-10">
-            <p className="text-sm uppercase tracking-[0.28em] text-[var(--accent)]">
-              Next steps
-            </p>
+            <p className="text-sm uppercase tracking-[0.28em] text-[var(--accent)]">{successPage.nextSteps}</p>
             <div className="mt-5 space-y-4">
               {successPage.checklist.map((item, index) => (
                 <div
@@ -47,11 +60,9 @@ export default function CheckoutSuccessPage() {
                   className="rounded-[1.4rem] border border-[rgba(24,38,29,0.08)] bg-[rgba(255,255,255,0.5)] p-5"
                 >
                   <p className="text-xs uppercase tracking-[0.22em] text-[var(--accent)]">
-                    Step {index + 1}
+                    {successPage.stepLabel(index + 1)}
                   </p>
-                  <p className="mt-3 text-base leading-7 text-[var(--foreground)]">
-                    {item}
-                  </p>
+                  <p className="mt-3 text-base leading-7 text-[var(--foreground)]">{item}</p>
                 </div>
               ))}
             </div>

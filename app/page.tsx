@@ -11,6 +11,7 @@ export default async function Home() {
   const cookieLocale = cookieStore.get("onestep_locale")?.value;
   const locale = normalizeSiteLocale(cookieLocale);
   const home = getHomePageCopy(locale);
+  const onboardingHref = `/onboarding?lang=${locale}`;
 
   return (
     <main className="min-h-screen bg-[#fafafa] text-[#121212]">
@@ -31,6 +32,7 @@ export default async function Home() {
         <div className="mt-12">
           <p className="text-sm text-[#7c7c7c] text-center mb-3">{home.notSure}</p>
           <GuidedChoice
+            onboardingHref={onboardingHref}
             copy={{
               intro: home.guidedIntro,
               choices: home.guidedChoices,
@@ -40,7 +42,7 @@ export default async function Home() {
           />
           <p className="text-sm text-[#636363] text-center mb-4">{home.oneDecision}</p>
           <Link
-            href="/onboarding"
+            href={onboardingHref}
             className="inline-block bg-[#121212] text-white border border-[#121212] text-base font-medium px-8 py-4 rounded-full hover:bg-[#2a2a2a] transition-colors duration-200 cursor-pointer"
           >
             {home.ctaPrimary}
@@ -142,7 +144,7 @@ export default async function Home() {
         <div className="mt-10">
           <p className="text-sm text-[#636363] text-center mb-4">{home.oneDecision}</p>
           <Link
-            href="/onboarding"
+            href={onboardingHref}
             className="inline-block bg-[#121212] text-white border border-[#121212] text-base font-medium px-8 py-4 rounded-full hover:bg-[#2a2a2a] transition-colors duration-200 cursor-pointer"
           >
             {home.ctaPrimary}
