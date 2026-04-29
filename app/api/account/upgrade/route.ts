@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
-import { prisma } from "@/lib/db";
 import { getPlanForCategoryCount } from "@/lib/billing/plans";
+import { prisma } from "@/lib/db";
+import { STRIPE_API_VERSION } from "@/lib/stripe/stripe-version";
 
 type UpgradeBody = {
   userId?: string;
@@ -29,7 +30,7 @@ function getStripeClient(): Stripe {
   }
 
   return new Stripe(secretKey, {
-    apiVersion: "2023-10-16",
+    apiVersion: STRIPE_API_VERSION,
   });
 }
 
@@ -56,9 +57,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "userId is required." }, { status: 400 });
   }
 
-  if (!Number.isInteger(targetThemeCount) || ![2, 3].includes(targetThemeCount ?? 0)) {
+  if (targetThemeCount !== 2 && targetThemeCount !== 3) {
     return NextResponse.json({ error: "targetThemeCount must be 2 or 3." }, { status: 400 });
   }
+
+  const targetCount = targetThemeCount;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -87,14 +90,14 @@ export async function POST(request: Request) {
   }
 
   const currentThemeLimit = getPlanThemeLimit(user.subscription.plan);
-  if (targetThemeCount <= currentThemeLimit) {
+  if (targetCount <= currentThemeLimit) {
     return NextResponse.json(
       { error: "Downgrades are not available from the dashboard." },
       { status: 400 },
     );
   }
 
-  const targetPlan = getPlanForCategoryCount(targetThemeCount)?.[1];
+  const targetPlan = getPlanForCategoryCount(targetCount)?.[1];
   if (!targetPlan) {
     return NextResponse.json({ error: "Target plan not found." }, { status: 400 });
   }
@@ -121,14 +124,14 @@ export async function POST(request: Request) {
     await prisma.subscription.update({
       where: { id: user.subscription.id },
       data: {
-        plan: PLAN_BY_THEME_COUNT[targetThemeCount],
+        plan: PLAN_BY_THEME_COUNT[targetCount],
       },
     });
 
     return NextResponse.json({
       ok: true,
-      planLabel: PLAN_LABEL_BY_THEME_COUNT[targetThemeCount],
-      planThemeLimit: targetThemeCount,
+      planLabel: PLAN_LABEL_BY_THEME_COUNT[targetCount],
+      planThemeLimit: targetCount,
     });
   } catch (error) {
     console.error("Failed to upgrade subscription.", error);

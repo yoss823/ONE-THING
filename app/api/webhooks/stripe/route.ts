@@ -5,10 +5,9 @@ import { resolvePlanFromStripePriceId } from "@/lib/billing/plans";
 import { prisma } from "@/lib/db";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcomeEmail";
 import { normalizeSiteLocale } from "@/lib/i18n/locale";
+import { STRIPE_API_VERSION } from "@/lib/stripe/stripe-version";
 
 export const runtime = "nodejs";
-
-type StripeClientConfig = ConstructorParameters<typeof Stripe>[1];
 
 const CATEGORY_MAP: Record<string, ActionCategory> = {
   mental_clarity: ActionCategory.MENTAL_CLARITY,
@@ -33,8 +32,8 @@ function getStripeClient(): Stripe {
   }
 
   return new Stripe(secretKey, {
-    apiVersion: "2023-10-16",
-  } as unknown as StripeClientConfig);
+    apiVersion: STRIPE_API_VERSION,
+  });
 }
 
 function normalizeCategory(value: string): string {

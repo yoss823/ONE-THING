@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { prisma } from "@/lib/db";
+import { STRIPE_API_VERSION } from "@/lib/stripe/stripe-version";
 import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 
 type BillingPortalBody = {
@@ -16,7 +17,7 @@ function getStripeClient(): Stripe {
   }
 
   return new Stripe(secretKey, {
-    apiVersion: "2023-10-16",
+    apiVersion: STRIPE_API_VERSION,
   });
 }
 

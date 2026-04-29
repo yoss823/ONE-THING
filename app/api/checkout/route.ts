@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
-import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 import { normalizeSiteLocale } from "@/lib/i18n/locale";
+import { STRIPE_API_VERSION } from "@/lib/stripe/stripe-version";
+import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 
 export const runtime = "nodejs";
 
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
   }
 
   const stripe = new Stripe(secretKey, {
-    apiVersion: "2023-10-16" as const,
+    apiVersion: STRIPE_API_VERSION,
   });
 
   const metadata = {
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
     locale: checkoutLocale,
   };
 
-  const stripeCheckoutLocale: Stripe.Checkout.SessionCreateParams.Locale =
+  const checkoutUiLocale =
     checkoutLocale === "fr" ? "fr" : checkoutLocale === "es" ? "es" : "en";
 
   try {
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${baseUrl}/welcome?session_id={CHECKOUT_SESSION_ID}&lang=${checkoutLocale}`,
       cancel_url: `${baseUrl}/onboarding?lang=${checkoutLocale}`,
-      locale: stripeCheckoutLocale,
+      locale: checkoutUiLocale,
       metadata,
       subscription_data: { metadata },
     });

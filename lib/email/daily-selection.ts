@@ -1,7 +1,7 @@
 import {
   ActionCategory,
+  DailyDeliveryStatus,
   DailyDeliveryType,
-  Prisma,
 } from "@prisma/client";
 
 import {
@@ -43,8 +43,8 @@ function getDefaultComplexity(energyLevel: number): ActionComplexity {
 }
 
 function countLeadingStatus(
-  statuses: Prisma.DailyDeliveryStatus[],
-  targetStatus: Prisma.DailyDeliveryStatus,
+  statuses: DailyDeliveryStatus[],
+  targetStatus: DailyDeliveryStatus,
 ): number {
   let count = 0;
 
@@ -63,7 +63,7 @@ function buildCategoryState(
   defaultComplexity: ActionComplexity,
   logs: Array<{
     actionId: string | null;
-    status: Prisma.DailyDeliveryStatus;
+    status: DailyDeliveryStatus;
     action: {
       texture: string;
     } | null;
@@ -73,11 +73,11 @@ function buildCategoryState(
     defaultComplexity,
     consecutiveDoneCount: countLeadingStatus(
       logs.map((log) => log.status),
-      Prisma.DailyDeliveryStatus.COMPLETED,
+      DailyDeliveryStatus.COMPLETED,
     ),
     consecutivePauseCount: countLeadingStatus(
       logs.map((log) => log.status),
-      Prisma.DailyDeliveryStatus.SKIPPED,
+      DailyDeliveryStatus.SKIPPED,
     ),
     recentActionIds: logs.flatMap((log) => (log.actionId ? [log.actionId] : [])),
     recentTextures: logs.flatMap((log) =>
@@ -182,7 +182,7 @@ export async function selectDailyEmailActions({
     );
 
     if (candidates.length === 0) {
-      return;
+      return [];
     }
 
     const categoryState = buildCategoryState(defaultComplexity, categoryLogs);

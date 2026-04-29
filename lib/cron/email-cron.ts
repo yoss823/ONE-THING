@@ -1,8 +1,7 @@
 import {
   ActionCategory,
+  DailyDeliveryStatus,
   DailyDeliveryType,
-  PrismaClientKnownRequestError,
-  Prisma,
   UserEventType,
 } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -13,6 +12,15 @@ import { formatCategoryLabel } from "@/lib/email/category-labels";
 import { sendDailyActionEmail } from "@/lib/email/sendDailyAction";
 import { sendMonthlyClarityEmail } from "@/lib/email/sendMonthlyClarity";
 import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
+
+function isPrismaUniqueConstraintViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "P2002"
+  );
+}
 
 const TARGET_SEND_HOUR = 8;
 const TARGET_SEND_MINUTE = 0;
@@ -216,7 +224,7 @@ async function acquireDeliveryWindowLock(params: {
     });
     return true;
   } catch (error) {
-    if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+    if (isPrismaUniqueConstraintViolation(error)) {
       return false;
     }
     throw error;
@@ -247,14 +255,14 @@ async function loadActiveUsers(): Promise<ActiveUser[]> {
     },
   });
 
-  return users.filter(
-    (user): user is ActiveUser =>
+  return users.filter((user): user is ActiveUser => {
+    const sub = user.subscription;
+    return (
       user.preference !== null &&
-      Boolean(user.subscription) &&
-      ["active", "trialing", "past_due"].includes(
-        user.subscription.status.toLowerCase(),
-      ),
-  );
+      sub !== null &&
+      ["active", "trialing", "past_due"].includes(sub.status.toLowerCase())
+    );
+  });
 }
 
 async function logDailySend(params: {
@@ -269,7 +277,7 @@ async function logDailySend(params: {
         userId: params.userId,
         actionId: action.actionId,
         type: DailyDeliveryType.DAILY,
-        status: Prisma.DailyDeliveryStatus.SENT,
+        status: DailyDeliveryStatus.SENT,
         localDate: params.localDate,
         sentAt: params.sentAt,
       })),
@@ -565,10 +573,10 @@ export async function handleMonthlyClarityEmailCron(
         }),
       ]);
       const completedLogs = recentDailyLogs.filter(
-        (log) => log.status === Prisma.DailyDeliveryStatus.COMPLETED,
+        (log) => log.status === DailyDeliveryStatus.COMPLETED,
       );
       const skippedLogs = recentDailyLogs.filter(
-        (log) => log.status === Prisma.DailyDeliveryStatus.SKIPPED,
+        (log) => log.status === DailyDeliveryStatus.SKIPPED,
       );
       const currentCategories = user.preference.categories.map(formatCategoryLabel);
       const topCategory = chooseTopCategory(
@@ -595,7 +603,7 @@ export async function handleMonthlyClarityEmailCron(
         data: {
           userId: user.id,
           type: DailyDeliveryType.MONTHLY_CLARITY,
-          status: Prisma.DailyDeliveryStatus.SENT,
+          status: DailyDeliveryStatus.SENT,
           localDate,
           sentAt: new Date(),
         },
