@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Fraunces, IBM_Plex_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 
 import { LanguageBar } from "@/components/LanguageBar";
+import { normalizeSiteLocale } from "@/lib/i18n/locale";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -22,13 +24,16 @@ export const metadata: Metadata = {
     "ONE THING sends one clear morning action for the categories you selected, plus a weekly summary and a monthly clarity check.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const htmlLang = normalizeSiteLocale(cookieStore.get("onestep_locale")?.value);
+
   return (
-    <html lang="en" className={`${fraunces.variable} ${ibmPlexSans.variable}`}>
+    <html lang={htmlLang} className={`${fraunces.variable} ${ibmPlexSans.variable}`}>
       <body>
         <LanguageBar />
         <Script
