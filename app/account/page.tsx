@@ -585,21 +585,15 @@ function AccountContent() {
             ) : null}
 
             <div className="mt-4 rounded-xl border border-[#e7e7e7] bg-white p-4">
-              <p className="text-sm font-medium text-[#111]">
-                {getAccountBillingCopy(normalizeSiteLocale(locale)).title}
-              </p>
-              <p className="mt-2 text-sm text-[#666]">
-                {getAccountBillingCopy(normalizeSiteLocale(locale)).description}
-              </p>
+              <p className="text-sm font-medium text-[#111]">{billingCopy.title}</p>
+              <p className="mt-2 text-sm text-[#666]">{billingCopy.description}</p>
               <button
                 type="button"
                 onClick={() => void handleOpenBillingPortal()}
                 disabled={isOpeningBillingPortal || isUpgradingPlan !== null}
                 className="mt-3 bg-[#111] text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                {isOpeningBillingPortal
-                  ? getAccountBillingCopy(normalizeSiteLocale(locale)).opening
-                  : getAccountBillingCopy(normalizeSiteLocale(locale)).button}
+                {isOpeningBillingPortal ? billingCopy.opening : billingCopy.button}
               </button>
             </div>
 
