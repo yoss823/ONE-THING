@@ -9,6 +9,7 @@ import {
 } from "@/emails/WeeklySummaryEmail";
 import { prisma } from "@/lib/db";
 import { getEmailFrom } from "@/lib/email/sender";
+import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -533,7 +534,7 @@ function getPartValue(
 }
 
 function getBaseUrl(request: Request): string {
-  return process.env.NEXT_PUBLIC_BASE_URL ?? new URL(request.url).origin;
+  return tryResolvePublicBaseUrl() ?? new URL(request.url).origin;
 }
 
 function getResendClient(): Resend {

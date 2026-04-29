@@ -6,6 +6,7 @@ import {
   WELCOME_EMAIL_TEXT,
 } from "@/emails/WelcomeEmail";
 import { getEmailFrom } from "@/lib/email/sender";
+import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 
 function getResendClient(): Resend {
   const apiKey = process.env.RESEND_API_KEY;
@@ -23,7 +24,7 @@ export async function sendWelcomeEmail(
   userId?: string,
 ): Promise<void> {
   try {
-    const baseUrl = process.env.APP_URL?.trim() || process.env.NEXT_PUBLIC_BASE_URL?.trim();
+    const baseUrl = tryResolvePublicBaseUrl();
     const manageUrl =
       baseUrl && userId
         ? new URL(`/account?userId=${encodeURIComponent(userId)}`, baseUrl).toString()

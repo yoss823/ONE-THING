@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { prisma } from "@/lib/db";
+import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 
 type BillingPortalBody = {
   userId?: string;
@@ -20,10 +21,7 @@ function getStripeClient(): Stripe {
 }
 
 function resolveReturnUrl(request: Request, userId: string): string {
-  const baseUrl =
-    process.env.APP_URL?.trim() ||
-    process.env.NEXT_PUBLIC_BASE_URL?.trim() ||
-    new URL(request.url).origin;
+  const baseUrl = tryResolvePublicBaseUrl() ?? new URL(request.url).origin;
 
   return new URL(`/account?userId=${encodeURIComponent(userId)}`, baseUrl).toString();
 }

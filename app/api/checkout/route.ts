@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
+import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
+
 export const runtime = "nodejs";
 
 type CheckoutRequestBody = {
@@ -62,7 +64,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Checkout is not configured." }, { status: 503 });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const baseUrl = tryResolvePublicBaseUrl();
   if (!baseUrl) {
     return NextResponse.json({ error: "Base URL is not configured." }, { status: 503 });
   }

@@ -12,6 +12,7 @@ import { selectDailyEmailActions } from "@/lib/email/daily-selection";
 import { formatCategoryLabel } from "@/lib/email/category-labels";
 import { sendDailyActionEmail } from "@/lib/email/sendDailyAction";
 import { sendMonthlyClarityEmail } from "@/lib/email/sendMonthlyClarity";
+import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 
 const TARGET_SEND_HOUR = 8;
 const TARGET_SEND_MINUTE = 0;
@@ -85,11 +86,7 @@ function authorizeCron(request: Request): NextResponse | null {
 }
 
 function resolveBaseUrl(request: Request): string {
-  return (
-    process.env.APP_URL?.trim() ||
-    process.env.NEXT_PUBLIC_BASE_URL?.trim() ||
-    new URL(request.url).origin
-  );
+  return tryResolvePublicBaseUrl() ?? new URL(request.url).origin;
 }
 
 function resolveTimezone(timezone: string | null | undefined): string {
