@@ -15,7 +15,7 @@ import { sendMonthlyClarityEmail } from "@/lib/email/sendMonthlyClarity";
 
 const TARGET_SEND_HOUR = 8;
 const TARGET_SEND_MINUTE = 0;
-const SEND_TOLERANCE_MINUTES = 10;
+const SEND_WINDOW_MINUTES = 20;
 
 type LocalTimeSnapshot = {
   year: number;
@@ -150,7 +150,10 @@ function isDueAtEightAm(snapshot: LocalTimeSnapshot): boolean {
   const currentMinutes = snapshot.hour * 60 + snapshot.minute;
   const targetMinutes = TARGET_SEND_HOUR * 60 + TARGET_SEND_MINUTE;
 
-  return Math.abs(currentMinutes - targetMinutes) <= SEND_TOLERANCE_MINUTES;
+  return (
+    currentMinutes >= targetMinutes &&
+    currentMinutes <= targetMinutes + SEND_WINDOW_MINUTES
+  );
 }
 
 function formatDailyDateLabel(instant: Date, timeZone: string): string {
@@ -247,9 +250,11 @@ async function loadActiveUsers(): Promise<ActiveUser[]> {
 
   return users.filter(
     (user): user is ActiveUser =>
-      user.subscription?.status === "active" &&
       user.preference !== null &&
-      Boolean(user.timezone),
+      Boolean(user.subscription) &&
+      ["active", "trialing", "past_due"].includes(
+        user.subscription.status.toLowerCase(),
+      ),
   );
 }
 
