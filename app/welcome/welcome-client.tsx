@@ -54,10 +54,10 @@ export function WelcomeClient({
   }, [locale, hasCheckoutSession]);
 
   return (
-    <main className="min-h-screen bg-white flex items-center justify-center px-6 py-16">
+    <main className="min-h-screen bg-white flex items-center justify-center px-6 py-16 font-[var(--font-body)]">
       <div className="w-full max-w-[480px]">
         <h1
-          className="text-4xl md:text-5xl font-bold tracking-tight text-[#111] mb-6"
+          className="text-4xl md:text-5xl font-bold tracking-tight text-[#111] mb-6 font-[var(--font-display)]"
           style={{ letterSpacing: "-0.03em", lineHeight: 1 }}
         >
           {copy.title}

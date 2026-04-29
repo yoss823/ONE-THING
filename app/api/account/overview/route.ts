@@ -2,6 +2,8 @@ import { DailyDeliveryStatus, DailyDeliveryType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
+import { getMonthlyProgressMessage } from "@/lib/i18n/account-monthly";
+import { normalizeSiteLocale } from "@/lib/i18n/locale";
 
 const PLAN_LABELS: Record<string, string> = {
   tier_1: "1 theme",
@@ -164,12 +166,8 @@ export async function GET(request: NextRequest) {
   const completionRate =
     sentCount > 0 ? Math.round((completedCount / sentCount) * 100) : 0;
 
-  const monthlyMessage =
-    completionRate >= 70
-      ? "Great consistency this month. Keep your rhythm."
-      : completionRate >= 40
-        ? "You're building momentum. Small steps still count."
-        : "A new month is a fresh start. Keep it simple and steady.";
+  const preferenceLocale = normalizeSiteLocale(user.preference.locale ?? "en");
+  const monthlyMessage = getMonthlyProgressMessage(preferenceLocale, completionRate);
 
   return NextResponse.json({
     ok: true,
