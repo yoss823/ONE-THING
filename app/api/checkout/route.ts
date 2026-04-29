@@ -95,7 +95,7 @@ export async function POST(request: Request) {
       customer_email: email,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${baseUrl}/welcome?session_id={CHECKOUT_SESSION_ID}&lang=${checkoutLocale}`,
-      cancel_url: `${baseUrl}/onboarding`,
+      cancel_url: `${baseUrl}/onboarding?lang=${checkoutLocale}`,
       locale: stripeCheckoutLocale,
       metadata,
       subscription_data: { metadata },

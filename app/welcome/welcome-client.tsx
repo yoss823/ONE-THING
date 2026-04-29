@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 
 import { writeLangCommittedCookie } from "@/lib/browser/lang-commitment";
@@ -27,6 +27,15 @@ function readOnboardingAnswers(): OnboardingAnswers | null {
   }
 }
 
+const noopSubscribe = () => () => {};
+
+function onboardingAnswersSnapshot(): OnboardingAnswers | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return readOnboardingAnswers();
+}
+
 export function WelcomeClient({
   locale,
   hasCheckoutSession,
@@ -35,7 +44,7 @@ export function WelcomeClient({
   hasCheckoutSession: boolean;
 }) {
   const copy = useMemo(() => getWelcomeScreenCopy(locale), [locale]);
-  const [onboarding, setOnboarding] = useState<OnboardingAnswers | null>(null);
+  const onboarding = useSyncExternalStore(noopSubscribe, onboardingAnswersSnapshot, () => null);
 
   useEffect(() => {
     writeSiteLocaleCookie(locale);
@@ -43,10 +52,6 @@ export function WelcomeClient({
       writeLangCommittedCookie();
     }
   }, [locale, hasCheckoutSession]);
-
-  useEffect(() => {
-    setOnboarding(readOnboardingAnswers());
-  }, []);
 
   return (
     <main className="min-h-screen bg-white flex items-center justify-center px-6 py-16">
@@ -86,7 +91,10 @@ export function WelcomeClient({
 
         <p className="text-sm text-[#888]">
           {copy.manageLine}{" "}
-          <Link href="/account" className="text-[#111] underline underline-offset-2">
+          <Link
+            href={`/account?lang=${locale}`}
+            className="text-[#111] underline underline-offset-2"
+          >
             {copy.manageLink}
           </Link>
           .

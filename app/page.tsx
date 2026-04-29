@@ -54,7 +54,7 @@ export default async function Home() {
           <p className="text-sm font-medium text-[#1a1a1a]">{home.subscriber.title}</p>
           <p className="mt-2 text-sm text-[#666] leading-relaxed">{home.subscriber.description}</p>
           <Link
-            href="/account"
+            href={`/account?lang=${locale}`}
             className="mt-4 inline-block text-sm font-medium text-[#121212] underline underline-offset-4 hover:text-[#444]"
           >
             {home.subscriber.linkLabel}

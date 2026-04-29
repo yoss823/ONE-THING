@@ -6,9 +6,19 @@ import { getAccountUiCopy } from "@/lib/i18n/account-ui";
 import type { SiteLocale } from "@/lib/i18n/locale";
 import { normalizeSiteLocale } from "@/lib/i18n/locale";
 
-export default async function AccountPage() {
+type Search = { [key: string]: string | string[] | undefined };
+
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<Search>;
+}) {
+  const sp = await searchParams;
+  const langFromUrl = typeof sp.lang === "string" ? sp.lang : undefined;
   const cookieStore = await cookies();
-  const siteLocale: SiteLocale = normalizeSiteLocale(cookieStore.get("onestep_locale")?.value);
+  const siteLocale: SiteLocale = normalizeSiteLocale(
+    langFromUrl ?? cookieStore.get("onestep_locale")?.value,
+  );
   const ui = getAccountUiCopy(siteLocale);
 
   return (

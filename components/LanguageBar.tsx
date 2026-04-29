@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
+import { readLangCommittedFromCookie } from "@/lib/browser/lang-commitment";
 import { writeSiteLocaleCookie } from "@/lib/browser/site-locale-cookie";
 import type { SiteLocale } from "@/lib/i18n/locale";
 
@@ -11,8 +12,22 @@ const OPTIONS: Array<{ value: SiteLocale; label: string }> = [
   { value: "es", label: "ES" },
 ];
 
+const HIDDEN_PREFIXES = ["/onboarding", "/welcome", "/checkout/success", "/account"];
+
+function shouldHideLanguageBar(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return HIDDEN_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export function LanguageBar() {
   const router = useRouter();
+  const pathname = usePathname();
+  const langCommitted =
+    typeof window !== "undefined" && readLangCommittedFromCookie();
+
+  if (shouldHideLanguageBar(pathname) || langCommitted) {
+    return null;
+  }
 
   function pickLocale(next: SiteLocale) {
     writeSiteLocaleCookie(next);

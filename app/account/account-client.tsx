@@ -231,6 +231,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
 
         if (isMounted) {
           setError("");
+          writeSiteLocaleCookie(resolvedPreferenceLocale);
           const normalizedThemes = data.currentThemes.map((theme) =>
             toThemeOptionValue(theme),
           );
