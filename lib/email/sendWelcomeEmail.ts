@@ -1,11 +1,9 @@
 import { Resend } from "resend";
 
-import {
-  generateWelcomeEmailHtml,
-  WELCOME_EMAIL_SUBJECT,
-  WELCOME_EMAIL_TEXT,
-} from "@/emails/WelcomeEmail";
+import { generateWelcomeEmailHtml, generateWelcomeEmailText } from "@/emails/WelcomeEmail";
 import { getEmailFrom } from "@/lib/email/sender";
+import type { SiteLocale } from "@/lib/i18n/locale";
+import { normalizeSiteLocale } from "@/lib/i18n/locale";
 import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 
 function getResendClient(): Resend {
@@ -22,6 +20,7 @@ export async function sendWelcomeEmail(
   toEmail: string,
   toName?: string,
   userId?: string,
+  locale?: SiteLocale | string | null,
 ): Promise<void> {
   try {
     const baseUrl = tryResolvePublicBaseUrl();
@@ -29,17 +28,21 @@ export async function sendWelcomeEmail(
       baseUrl && userId
         ? new URL(`/account?userId=${encodeURIComponent(userId)}`, baseUrl).toString()
         : undefined;
-    const text = manageUrl
-      ? `${WELCOME_EMAIL_TEXT}\n\nManage your themes: ${manageUrl}`
-      : WELCOME_EMAIL_TEXT;
+    const siteLocale = normalizeSiteLocale(typeof locale === "string" ? locale : undefined);
+    const { subject, text } = generateWelcomeEmailText({
+      toName: toName?.trim() || undefined,
+      manageUrl,
+      locale: siteLocale,
+    });
     const resend = getResendClient();
     const result = await resend.emails.send({
       from: getEmailFrom(),
       to: toEmail,
-      subject: WELCOME_EMAIL_SUBJECT,
+      subject,
       html: generateWelcomeEmailHtml({
         toName: toName?.trim() || undefined,
         manageUrl,
+        locale: siteLocale,
       }),
       text,
     });

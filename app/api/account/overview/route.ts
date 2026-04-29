@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
     currentSettings: {
       energyLevel: user.preference.energyLevel,
       availableMinutes: user.preference.availableMinutes,
-      locale: user.preference.locale,
+      locale: user.preference.locale ?? "en",
     },
     changesUsedThisMonth,
     changesRemainingThisMonth: Math.max(0, 3 - changesUsedThisMonth),

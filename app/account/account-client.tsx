@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
+import { writeSiteLocaleCookie } from "@/lib/browser/site-locale-cookie";
 import { getAccountUiCopy, type AccountUiCopy } from "@/lib/i18n/account-ui";
 import type { SiteLocale } from "@/lib/i18n/locale";
+import { normalizeSiteLocale } from "@/lib/i18n/locale";
 
 const THEME_OPTION_VALUES = [
   "mental_clarity",
@@ -60,6 +62,7 @@ function energyLabel(value: number, ui: AccountUiCopy): string {
 }
 
 export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId") ?? "";
   const [email, setEmail] = useState("");
@@ -193,25 +196,41 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
           };
         };
 
+        if (!response.ok) {
+          if (isMounted) {
+            setError(
+              response.status === 404
+                ? overviewUi.errNoSubscription
+                : ((data as { error?: string }).error ?? overviewUi.errLoadOverview),
+            );
+          }
+          return;
+        }
+
         if (
-          !response.ok ||
           !data.planLabel ||
           typeof data.planThemeLimit !== "number" ||
           !data.progress ||
           !Array.isArray(data.currentThemes) ||
           !data.currentSettings ||
-          typeof data.currentSettings.locale !== "string" ||
+          typeof data.currentSettings.energyLevel !== "number" ||
+          typeof data.currentSettings.availableMinutes !== "number" ||
           !Array.isArray(data.recentActions) ||
           !Array.isArray(data.todayObjective) ||
           typeof data.monthlyMessage !== "string"
         ) {
           if (isMounted) {
-            setError(data.error ?? overviewUi.errLoadOverview);
+            setError((data as { error?: string }).error ?? overviewUi.errLoadOverview);
           }
           return;
         }
 
+        const resolvedPreferenceLocale = normalizeSiteLocale(
+          typeof data.currentSettings.locale === "string" ? data.currentSettings.locale : undefined,
+        );
+
         if (isMounted) {
+          setError("");
           const normalizedThemes = data.currentThemes.map((theme) =>
             toThemeOptionValue(theme),
           );
@@ -221,10 +240,10 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
             changesRemainingThisMonth: data.changesRemainingThisMonth ?? 0,
             currentThemes: normalizedThemes,
             progress: data.progress,
-            currentSettings: data.currentSettings as {
-              energyLevel: number;
-              availableMinutes: number;
-              locale: string;
+            currentSettings: {
+              energyLevel: data.currentSettings.energyLevel,
+              availableMinutes: data.currentSettings.availableMinutes,
+              locale: resolvedPreferenceLocale,
             },
             recentActions: data.recentActions,
             todayObjective: data.todayObjective,
@@ -234,7 +253,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
           setSelected(normalizedThemes);
           setEnergyLevel(data.currentSettings.energyLevel);
           setAvailableMinutes(data.currentSettings.availableMinutes);
-          setLocale(data.currentSettings.locale);
+          setLocale(resolvedPreferenceLocale);
         }
       } catch {
         if (isMounted) {
@@ -324,11 +343,59 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
             }
           : prev,
       );
+      const nextLoc = data.locale ?? locale;
+      setLocale(nextLoc);
+      document.cookie = `onestep_locale=${nextLoc};path=/;max-age=31536000;SameSite=Lax`;
       setMessage(ui.msgSettingsUpdated);
+      router.refresh();
     } catch {
       setError(ui.errUpdateSettings);
     } finally {
       setIsSavingSettings(false);
+    }
+  }
+
+  async function handleLocaleChange(nextLocale: string) {
+    setError("");
+    setMessage("");
+    setLocale(nextLocale);
+    writeSiteLocaleCookie(nextLocale);
+
+    if (!userId) {
+      router.refresh();
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/account/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId, locale: nextLocale }),
+      });
+      const data = (await response.json()) as { error?: string; locale?: string };
+
+      if (!response.ok) {
+        setError(data.error ?? ui.errUpdateSettings);
+        return;
+      }
+
+      setOverview((prev) =>
+        prev
+          ? {
+              ...prev,
+              currentSettings: {
+                ...prev.currentSettings,
+                locale: data.locale ?? nextLocale,
+              },
+            }
+          : prev,
+      );
+    } catch {
+      setError(ui.errUpdateSettings);
+    } finally {
+      router.refresh();
     }
   }
 
@@ -558,6 +625,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
                 {isLoadingOverview ? "…" : overview?.changesRemainingThisMonth ?? 0}
               </span>
             </p>
+            <p className="mt-2 text-xs text-[#999] max-w-prose">{ui.subscriptionSingleNote}</p>
             {(overview?.planThemeLimit ?? 1) < 3 ? (
               <div className="mt-4 rounded-xl border border-[#e7e7e7] bg-white p-4">
                 <p className="text-sm text-[#222]">{ui.needMoreThemes}</p>
@@ -661,7 +729,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => setLocale(option.value)}
+                      onClick={() => void handleLocaleChange(option.value)}
                       className={`px-4 py-2 text-sm rounded-full border transition-colors ${
                         locale === option.value
                           ? "bg-[#111] text-white border-[#111]"

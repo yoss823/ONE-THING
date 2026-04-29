@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
+import { normalizeSiteLocale } from "@/lib/i18n/locale";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,8 @@ type CheckoutRequestBody = {
   energyLevel?: string;
   availableMinutes?: number;
   timezone?: string;
+  /** en | fr | es — stored for emails and welcome message; Stripe Checkout UI follows this when possible. */
+  locale?: string;
 };
 
 function isValidEmail(email: string): boolean {
@@ -27,7 +30,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { priceId, email, categories, energyLevel, availableMinutes, timezone } = body;
+  const { priceId, email, categories, energyLevel, availableMinutes, timezone, locale: rawLocale } =
+    body;
+  const checkoutLocale = normalizeSiteLocale(rawLocale);
 
   if (!priceId || typeof priceId !== "string") {
     return NextResponse.json({ error: "priceId is required." }, { status: 400 });
@@ -78,7 +83,11 @@ export async function POST(request: Request) {
     energyLevel,
     availableMinutes: String(availableMinutes),
     timezone,
+    locale: checkoutLocale,
   };
+
+  const stripeCheckoutLocale: Stripe.Checkout.SessionCreateParams.Locale =
+    checkoutLocale === "fr" ? "fr" : checkoutLocale === "es" ? "es" : "en";
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -87,6 +96,7 @@ export async function POST(request: Request) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${baseUrl}/welcome?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/onboarding`,
+      locale: stripeCheckoutLocale,
       metadata,
       subscription_data: { metadata },
     });

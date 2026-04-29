@@ -30,6 +30,8 @@ export type AccountUiCopy = {
   energyHigh: string;
   languageEmails: string;
   languageHint: string;
+  errNoSubscription: string;
+  subscriptionSingleNote: string;
   saveSettings: string;
   saving: string;
   coachCheckin: string;
@@ -97,8 +99,13 @@ const COPY: Record<SiteLocale, AccountUiCopy> = {
     energyLow: "Low",
     energyMedium: "Medium",
     energyHigh: "High",
-    languageEmails: "Language (emails)",
-    languageHint: "Daily emails use this language for buttons and footer. The rest of this page follows the language you pick in the top bar (EN / FR / ES).",
+    languageEmails: "Language",
+    languageHint:
+      "Used for daily emails and this page. Changing it saves immediately and updates the site language.",
+    errNoSubscription:
+      "No active subscription is linked to this link yet. Wait a minute after payment, or open the account link from your welcome email.",
+    subscriptionSingleNote:
+      "One active plan is shown here. A new purchase updates this row (Stripe may list several subscriptions for the same email).",
     saveSettings: "Save settings",
     saving: "Saving...",
     coachCheckin: "Coach check-in",
@@ -173,9 +180,13 @@ const COPY: Record<SiteLocale, AccountUiCopy> = {
     energyLow: "Faible",
     energyMedium: "Moyen",
     energyHigh: "Élevé",
-    languageEmails: "Langue (e-mails)",
+    languageEmails: "Langue",
     languageHint:
-      "Les e-mails quotidiens utilisent cette langue pour les boutons et le pied de page. Le reste de cette page suit la langue choisie en haut à droite (EN / FR / ES).",
+      "Utilisée pour les e-mails quotidiens et cette page. Le changement est enregistré tout de suite et met à jour la langue du site.",
+    errNoSubscription:
+      "Aucun abonnement actif n’est encore lié à ce lien. Attendez une minute après le paiement, ou ouvrez le lien « compte » depuis l’e-mail de bienvenue.",
+    subscriptionSingleNote:
+      "Une seule formule active s’affiche ici. Un nouvel achat met cette ligne à jour (Stripe peut lister plusieurs abonnements pour le même e-mail).",
     saveSettings: "Enregistrer les réglages",
     saving: "Enregistrement...",
     coachCheckin: "Point avec le coach",
@@ -249,9 +260,13 @@ const COPY: Record<SiteLocale, AccountUiCopy> = {
     energyLow: "Baja",
     energyMedium: "Media",
     energyHigh: "Alta",
-    languageEmails: "Idioma (correos)",
+    languageEmails: "Idioma",
     languageHint:
-      "Los correos diarios usan este idioma en botones y pie de página. El resto de esta página sigue el idioma de la barra superior (EN / FR / ES).",
+      "Se usa en los correos diarios y en esta página. Al cambiarlo se guarda al momento y actualiza el idioma del sitio.",
+    errNoSubscription:
+      "Aún no hay una suscripción activa vinculada a este enlace. Espera un minuto tras el pago o abre el enlace de cuenta del correo de bienvenida.",
+    subscriptionSingleNote:
+      "Solo se muestra un plan activo. Una compra nueva actualiza esta fila (Stripe puede mostrar varias suscripciones con el mismo correo).",
     saveSettings: "Guardar ajustes",
     saving: "Guardando...",
     coachCheckin: "Check-in con el coach",

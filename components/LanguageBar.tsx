@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
+import { writeSiteLocaleCookie } from "@/lib/browser/site-locale-cookie";
 import type { SiteLocale } from "@/lib/i18n/locale";
 
 const OPTIONS: Array<{ value: SiteLocale; label: string }> = [
@@ -14,7 +15,7 @@ export function LanguageBar() {
   const router = useRouter();
 
   function pickLocale(next: SiteLocale) {
-    document.cookie = `onestep_locale=${next};path=/;max-age=31536000;SameSite=Lax`;
+    writeSiteLocaleCookie(next);
     router.refresh();
   }
 

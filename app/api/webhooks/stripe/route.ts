@@ -1,9 +1,10 @@
 import { ActionCategory } from "@prisma/client";
 import Stripe from "stripe";
 
-import { prisma } from "@/lib/db";
 import { resolvePlanFromStripePriceId } from "@/lib/billing/plans";
+import { prisma } from "@/lib/db";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcomeEmail";
+import { normalizeSiteLocale } from "@/lib/i18n/locale";
 
 export const runtime = "nodejs";
 
@@ -193,6 +194,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const energyLevel = parseEnergyLevel(session.metadata?.energyLevel);
   const availableMinutes = parseAvailableMinutes(session.metadata?.availableMinutes);
   const timezone = parseTimezone(session.metadata?.timezone);
+  const siteLocale = normalizeSiteLocale(session.metadata?.locale);
   const plan = derivePlan(categories.length);
   const createdAt = new Date();
 
@@ -215,6 +217,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           categories,
           energyLevel,
           availableMinutes,
+          locale: siteLocale,
         },
       },
     },
@@ -241,11 +244,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             categories,
             energyLevel,
             availableMinutes,
+            locale: siteLocale,
           },
           update: {
             categories,
             energyLevel,
             availableMinutes,
+            locale: siteLocale,
           },
         },
       },
@@ -262,7 +267,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     },
   });
 
-  await sendWelcomeEmail(email, name, user.id);
+  await sendWelcomeEmail(email, name, user.id, siteLocale);
 
   console.log("New subscriber:", email);
 }

@@ -75,6 +75,7 @@ export function OnboardingClient({ siteLocale }: { siteLocale: SiteLocale }) {
           energyLevel: energy,
           availableMinutes: Number(time),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+          locale: siteLocale,
         }),
       });
 
