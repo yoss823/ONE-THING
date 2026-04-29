@@ -3,6 +3,9 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { getAccountBillingCopy } from "@/lib/i18n/account-billing";
+import { normalizeSiteLocale } from "@/lib/i18n/locale";
+
 const THEME_OPTIONS = [
   { value: "mental_clarity", label: "Mental clarity" },
   { value: "organization", label: "Organization" },
@@ -85,6 +88,7 @@ function AccountContent() {
   const [checkinNote, setCheckinNote] = useState("");
   const [isSavingCheckin, setIsSavingCheckin] = useState(false);
   const [isUpgradingPlan, setIsUpgradingPlan] = useState<number | null>(null);
+  const [isOpeningBillingPortal, setIsOpeningBillingPortal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -92,6 +96,11 @@ function AccountContent() {
   const canSubmit = useMemo(
     () => Boolean(userId) && selected.length >= 1 && selected.length <= 3 && !isSubmitting,
     [isSubmitting, selected.length, userId],
+  );
+
+  const billingCopy = useMemo(
+    () => getAccountBillingCopy(normalizeSiteLocale(locale)),
+    [locale],
   );
 
   function toggleTheme(value: string) {
@@ -395,6 +404,34 @@ function AccountContent() {
     }
   }
 
+  async function handleOpenBillingPortal() {
+    setError("");
+    setMessage("");
+    setIsOpeningBillingPortal(true);
+
+    try {
+      const response = await fetch("/api/account/billing-portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId }),
+      });
+      const data = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok || typeof data.url !== "string" || !data.url) {
+        setError(data.error ?? "Unable to open billing.");
+        return;
+      }
+
+      window.location.assign(data.url);
+    } catch {
+      setError("Unable to open billing.");
+    } finally {
+      setIsOpeningBillingPortal(false);
+    }
+  }
+
   function formatRecentStatus(status: string): string {
     if (status === "COMPLETED") return "Completed";
     if (status === "SKIPPED") return "Skipped";
@@ -528,7 +565,7 @@ function AccountContent() {
                   {(overview?.planThemeLimit ?? 1) < 2 ? (
                     <button
                       onClick={() => handleUpgradePlan(2)}
-                      disabled={isUpgradingPlan !== null}
+                      disabled={isUpgradingPlan !== null || isOpeningBillingPortal}
                       className="bg-[#111] text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       {isUpgradingPlan === 2 ? "Upgrading..." : "Upgrade to 2 themes"}
@@ -537,7 +574,7 @@ function AccountContent() {
                   {(overview?.planThemeLimit ?? 1) < 3 ? (
                     <button
                       onClick={() => handleUpgradePlan(3)}
-                      disabled={isUpgradingPlan !== null}
+                      disabled={isUpgradingPlan !== null || isOpeningBillingPortal}
                       className="bg-[#111] text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       {isUpgradingPlan === 3 ? "Upgrading..." : "Upgrade to 3 themes"}
@@ -546,6 +583,25 @@ function AccountContent() {
                 </div>
               </div>
             ) : null}
+
+            <div className="mt-4 rounded-xl border border-[#e7e7e7] bg-white p-4">
+              <p className="text-sm font-medium text-[#111]">
+                {getAccountBillingCopy(normalizeSiteLocale(locale)).title}
+              </p>
+              <p className="mt-2 text-sm text-[#666]">
+                {getAccountBillingCopy(normalizeSiteLocale(locale)).description}
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleOpenBillingPortal()}
+                disabled={isOpeningBillingPortal || isUpgradingPlan !== null}
+                className="mt-3 bg-[#111] text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {isOpeningBillingPortal
+                  ? getAccountBillingCopy(normalizeSiteLocale(locale)).opening
+                  : getAccountBillingCopy(normalizeSiteLocale(locale)).button}
+              </button>
+            </div>
 
             <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
               <p className="text-sm text-[#222]">Today's objective</p>

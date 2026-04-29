@@ -22,7 +22,8 @@ const plans = [
 ];
 
 export default async function Home() {
-  const cookieLocale = cookies().get("onestep_locale")?.value;
+  const cookieStore = await cookies();
+  const cookieLocale = cookieStore.get("onestep_locale")?.value;
   const locale = normalizeSiteLocale(cookieLocale);
   const subscriberCta = getHomeSubscriberCta(locale);
 
