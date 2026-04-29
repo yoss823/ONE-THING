@@ -5,7 +5,7 @@ import {
   WELCOME_EMAIL_SUBJECT,
   WELCOME_EMAIL_TEXT,
 } from "@/emails/WelcomeEmail";
-import { EMAIL_FROM } from "@/lib/email/sender";
+import { getEmailFrom } from "@/lib/email/sender";
 
 function getResendClient(): Resend {
   const apiKey = process.env.RESEND_API_KEY;
@@ -15,10 +15,6 @@ function getResendClient(): Resend {
   }
 
   return new Resend(apiKey);
-}
-
-function getWelcomeEmailFrom(): string {
-  return process.env.RESEND_FROM?.trim() || process.env.EMAIL_FROM?.trim() || EMAIL_FROM;
 }
 
 export async function sendWelcomeEmail(
@@ -37,7 +33,7 @@ export async function sendWelcomeEmail(
       : WELCOME_EMAIL_TEXT;
     const resend = getResendClient();
     const result = await resend.emails.send({
-      from: getWelcomeEmailFrom(),
+      from: getEmailFrom(),
       to: toEmail,
       subject: WELCOME_EMAIL_SUBJECT,
       html: generateWelcomeEmailHtml({

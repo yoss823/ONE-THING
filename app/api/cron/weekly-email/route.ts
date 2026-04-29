@@ -8,7 +8,7 @@ import {
   type WeeklySummaryEmailProps,
 } from "@/emails/WeeklySummaryEmail";
 import { prisma } from "@/lib/db";
-import { EMAIL_FROM } from "@/lib/email/sender";
+import { getEmailFrom } from "@/lib/email/sender";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
       const html = generateWeeklySummaryHtml(emailProps);
       const text = generateWeeklySummaryText(emailProps);
       const result = await resend.emails.send({
-        from: EMAIL_FROM,
+        from: getEmailFrom(),
         to: user.email,
         subject: "Your week.",
         html,

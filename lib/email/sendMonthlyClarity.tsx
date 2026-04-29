@@ -5,7 +5,7 @@ import {
   generateMonthlyClarityHtml,
   generateMonthlyClarityText,
 } from "@/emails/MonthlyClarityEmail";
-import { EMAIL_FROM } from "@/lib/email/sender";
+import { getEmailFrom } from "@/lib/email/sender";
 
 function getResendClient(): Resend {
   const apiKey = process.env.RESEND_API_KEY;
@@ -25,7 +25,7 @@ export async function sendMonthlyClarityEmail(
   const resend = getResendClient();
 
   await resend.emails.send({
-    from: EMAIL_FROM,
+    from: getEmailFrom(),
     to: params.userEmail,
     subject,
     html: generateMonthlyClarityHtml(params),
