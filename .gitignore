@@ -43,3 +43,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 VSCodeUserSetup-x64-1.117.0.exe
+.env*.local
