@@ -8,6 +8,11 @@ const PLAN_LABELS: Record<string, string> = {
   tier_2: "2 themes",
   tier_3: "3 themes",
 };
+const PLAN_THEME_LIMITS: Record<string, number> = {
+  tier_1: 1,
+  tier_2: 2,
+  tier_3: 3,
+};
 
 const CATEGORY_LABELS: Record<string, string> = {
   MENTAL_CLARITY: "Mental clarity",
@@ -168,6 +173,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     planLabel: PLAN_LABELS[user.subscription.plan] ?? user.subscription.plan,
+    planThemeLimit: PLAN_THEME_LIMITS[user.subscription.plan] ?? 1,
     subscriptionStatus: user.subscription.status,
     currentThemes: user.preference.categories,
     currentSettings: {

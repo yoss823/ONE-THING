@@ -36,6 +36,7 @@ function AccountContent() {
   const [isResolvingAccess, setIsResolvingAccess] = useState(false);
   const [overview, setOverview] = useState<{
     planLabel: string;
+    planThemeLimit: number;
     changesRemainingThisMonth: number;
     currentThemes: string[];
     progress: {
@@ -75,6 +76,7 @@ function AccountContent() {
   const [checkinMood, setCheckinMood] = useState<string>("right");
   const [checkinNote, setCheckinNote] = useState("");
   const [isSavingCheckin, setIsSavingCheckin] = useState(false);
+  const [isOpeningBillingPortal, setIsOpeningBillingPortal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -131,6 +133,7 @@ function AccountContent() {
         const data = (await response.json()) as {
           error?: string;
           planLabel?: string;
+          planThemeLimit?: number;
           changesRemainingThisMonth?: number;
           currentThemes?: string[];
           currentSettings?: {
@@ -165,6 +168,7 @@ function AccountContent() {
         if (
           !response.ok ||
           !data.planLabel ||
+          typeof data.planThemeLimit !== "number" ||
           !data.progress ||
           !Array.isArray(data.currentThemes) ||
           !data.currentSettings ||
@@ -184,6 +188,7 @@ function AccountContent() {
           );
           setOverview({
             planLabel: data.planLabel,
+            planThemeLimit: data.planThemeLimit,
             changesRemainingThisMonth: data.changesRemainingThisMonth ?? 0,
             currentThemes: normalizedThemes,
             progress: data.progress,
@@ -335,6 +340,34 @@ function AccountContent() {
     }
   }
 
+  async function handleOpenBillingPortal() {
+    setError("");
+    setMessage("");
+    setIsOpeningBillingPortal(true);
+
+    try {
+      const response = await fetch("/api/account/billing-portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId }),
+      });
+      const data = (await response.json()) as { error?: string; url?: string };
+
+      if (!response.ok || !data.url) {
+        setError(data.error ?? "Unable to open billing portal.");
+        return;
+      }
+
+      window.location.assign(data.url);
+    } catch {
+      setError("Unable to open billing portal.");
+    } finally {
+      setIsOpeningBillingPortal(false);
+    }
+  }
+
   function formatRecentStatus(status: string): string {
     if (status === "COMPLETED") return "Completed";
     if (status === "SKIPPED") return "Skipped";
@@ -459,6 +492,20 @@ function AccountContent() {
                 {isLoadingOverview ? "…" : overview?.changesRemainingThisMonth ?? 0}
               </span>
             </p>
+            {(overview?.planThemeLimit ?? 1) < 3 ? (
+              <div className="mt-4 rounded-xl border border-[#e7e7e7] bg-white p-4">
+                <p className="text-sm text-[#222]">
+                  Need more themes? Upgrade your plan without re-entering your card.
+                </p>
+                <button
+                  onClick={handleOpenBillingPortal}
+                  disabled={isOpeningBillingPortal}
+                  className="mt-3 bg-[#111] text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {isOpeningBillingPortal ? "Opening..." : "Upgrade plan"}
+                </button>
+              </div>
+            ) : null}
 
             <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
               <p className="text-sm text-[#222]">Today's objective</p>
