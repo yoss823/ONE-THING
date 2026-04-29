@@ -76,7 +76,7 @@ function AccountContent() {
   const [checkinMood, setCheckinMood] = useState<string>("right");
   const [checkinNote, setCheckinNote] = useState("");
   const [isSavingCheckin, setIsSavingCheckin] = useState(false);
-  const [isOpeningBillingPortal, setIsOpeningBillingPortal] = useState(false);
+  const [isUpgradingPlan, setIsUpgradingPlan] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -340,31 +340,44 @@ function AccountContent() {
     }
   }
 
-  async function handleOpenBillingPortal() {
+  async function handleUpgradePlan(targetThemeCount: number) {
     setError("");
     setMessage("");
-    setIsOpeningBillingPortal(true);
+    setIsUpgradingPlan(targetThemeCount);
 
     try {
-      const response = await fetch("/api/account/billing-portal", {
+      const response = await fetch("/api/account/upgrade", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, targetThemeCount }),
       });
-      const data = (await response.json()) as { error?: string; url?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        planLabel?: string;
+        planThemeLimit?: number;
+      };
 
-      if (!response.ok || !data.url) {
-        setError(data.error ?? "Unable to open billing portal.");
+      if (!response.ok || typeof data.planThemeLimit !== "number" || !data.planLabel) {
+        setError(data.error ?? "Unable to upgrade plan.");
         return;
       }
 
-      window.location.assign(data.url);
+      setOverview((prev) =>
+        prev
+          ? {
+              ...prev,
+              planLabel: data.planLabel ?? prev.planLabel,
+              planThemeLimit: data.planThemeLimit ?? prev.planThemeLimit,
+            }
+          : prev,
+      );
+      setMessage(`Plan upgraded to ${data.planLabel}.`);
     } catch {
-      setError("Unable to open billing portal.");
+      setError("Unable to upgrade plan.");
     } finally {
-      setIsOpeningBillingPortal(false);
+      setIsUpgradingPlan(null);
     }
   }
 
@@ -497,13 +510,26 @@ function AccountContent() {
                 <p className="text-sm text-[#222]">
                   Need more themes? Upgrade your plan without re-entering your card.
                 </p>
-                <button
-                  onClick={handleOpenBillingPortal}
-                  disabled={isOpeningBillingPortal}
-                  className="mt-3 bg-[#111] text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  {isOpeningBillingPortal ? "Opening..." : "Upgrade plan"}
-                </button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(overview?.planThemeLimit ?? 1) < 2 ? (
+                    <button
+                      onClick={() => handleUpgradePlan(2)}
+                      disabled={isUpgradingPlan !== null}
+                      className="bg-[#111] text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      {isUpgradingPlan === 2 ? "Upgrading..." : "Upgrade to 2 themes"}
+                    </button>
+                  ) : null}
+                  {(overview?.planThemeLimit ?? 1) < 3 ? (
+                    <button
+                      onClick={() => handleUpgradePlan(3)}
+                      disabled={isUpgradingPlan !== null}
+                      className="bg-[#111] text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      {isUpgradingPlan === 3 ? "Upgrading..." : "Upgrade to 3 themes"}
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ) : null}
 

@@ -2,6 +2,7 @@ import { ActionCategory } from "@prisma/client";
 import Stripe from "stripe";
 
 import { prisma } from "@/lib/db";
+import { resolvePlanFromStripePriceId } from "@/lib/billing/plans";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcomeEmail";
 
 export const runtime = "nodejs";
@@ -279,11 +280,25 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     return;
   }
 
+  const stripePriceId = subscription.items.data[0]?.price?.id;
+  const resolvedPlanKey = stripePriceId
+    ? resolvePlanFromStripePriceId(stripePriceId)
+    : null;
+  const resolvedPlan =
+    resolvedPlanKey === "oneCategory"
+      ? "tier_1"
+      : resolvedPlanKey === "twoCategories"
+        ? "tier_2"
+        : resolvedPlanKey === "threeCategories"
+          ? "tier_3"
+          : existingSubscription.plan;
+
   await prisma.subscription.update({
     where: { id: existingSubscription.id },
     data: {
       stripeSubscriptionId: subscription.id,
       status: normalizeSubscriptionStatus(subscription.status),
+      plan: resolvedPlan,
     },
   });
 }
