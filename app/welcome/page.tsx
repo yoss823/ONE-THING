@@ -1,144 +1,36 @@
-"use client";
-
 import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { cookies } from "next/headers";
 
-type OnboardingData = {
-  categories: string[];
-  energyLevel: string;
-  availableMinutes: number;
-};
+import { WelcomeClient } from "@/app/welcome/welcome-client";
+import type { SiteLocale } from "@/lib/i18n/locale";
+import { normalizeSiteLocale } from "@/lib/i18n/locale";
+import { getWelcomeScreenCopy } from "@/lib/i18n/welcome-screen";
 
-function readOnboardingData(): OnboardingData | null {
-  try {
-    const raw = localStorage.getItem("onboarding");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as OnboardingData;
-    if (!parsed || !Array.isArray(parsed.categories)) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
+type Search = { [key: string]: string | string[] | undefined };
 
-function WelcomeContent() {
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id");
+export default async function WelcomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Search>;
+}) {
+  const sp = await searchParams;
+  const sessionId = typeof sp.session_id === "string" ? sp.session_id : undefined;
+  const langFromStripe = typeof sp.lang === "string" ? sp.lang : undefined;
 
-  let onboarding: OnboardingData | null = null;
-  if (typeof window !== "undefined") {
-    onboarding = readOnboardingData();
-  }
+  const cookieStore = await cookies();
+  const fromCookie = cookieStore.get("onestep_locale")?.value;
+  const locale: SiteLocale = normalizeSiteLocale(langFromStripe ?? fromCookie);
+  const copy = getWelcomeScreenCopy(locale);
 
-  return (
-    <main
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#fff",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "4rem 1.5rem",
-      }}
-    >
-      <div style={{ width: "100%", maxWidth: 480 }}>
-        <h1
-          style={{
-            fontSize: "2.5rem",
-            fontWeight: 700,
-            letterSpacing: "-0.03em",
-            lineHeight: 1,
-            color: "#111",
-            marginBottom: "1.5rem",
-          }}
-        >
-          You&apos;re in.
-        </h1>
-
-        <p
-          style={{
-            fontSize: "1rem",
-            lineHeight: 1.75,
-            color: "#555",
-            marginBottom: "1rem",
-          }}
-        >
-          Your first email arrives tomorrow at 8:00 AM. One thing. That&apos;s it.
-        </p>
-
-        <p
-          style={{
-            fontSize: "1rem",
-            lineHeight: 1.75,
-            color: "#555",
-            marginBottom: "2rem",
-          }}
-        >
-          We&apos;ll track what you complete and quietly adjust over time. No login
-          needed. Just open the email.
-        </p>
-
-        {onboarding && onboarding.categories.length > 0 && (
-          <div
-            style={{
-              border: "1px solid #e5e5e5",
-              borderRadius: "1rem",
-              backgroundColor: "#faf8f2",
-              padding: "1.25rem 1.5rem",
-              fontSize: "0.875rem",
-              lineHeight: 1.75,
-              color: "#555",
-              marginBottom: "2rem",
-            }}
-          >
-            <p>Your categories: {onboarding.categories.join(", ")}</p>
-            {onboarding.energyLevel && (
-              <p>Energy level: {onboarding.energyLevel}</p>
-            )}
-            {onboarding.availableMinutes != null && (
-              <p>Time available: {onboarding.availableMinutes} minutes</p>
-            )}
-          </div>
-        )}
-
-        {sessionId && (
-          <p
-            style={{
-              fontSize: "0.75rem",
-              color: "#aaa",
-              marginBottom: "1.5rem",
-            }}
-          >
-            Session: {sessionId}
-          </p>
-        )}
-
-        <p style={{ fontSize: "0.875rem", color: "#888" }}>
-          Manage your themes now at <a href="/account" style={{ color: "#111", textDecoration: "underline" }}>/account</a>.
-        </p>
-      </div>
-    </main>
-  );
-}
-
-export default function WelcomePage() {
   return (
     <Suspense
       fallback={
-        <main
-          style={{
-            minHeight: "100vh",
-            backgroundColor: "#fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <p style={{ color: "#888", fontSize: "0.875rem" }}>Loading…</p>
+        <main className="min-h-screen bg-white flex items-center justify-center px-6">
+          <p className="text-sm text-[#888]">{copy.loading}</p>
         </main>
       }
     >
-      <WelcomeContent />
+      <WelcomeClient locale={locale} hasCheckoutSession={Boolean(sessionId)} />
     </Suspense>
   );
 }
