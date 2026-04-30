@@ -15,30 +15,33 @@
     "vercel:env:pull-production": "vercel env pull .env.vercel.production --environment=production",
     "vercel:env:pull-preview": "vercel env pull .env.vercel.preview --environment=preview",
     "vercel:env:pull-development": "vercel env pull .env.vercel.development --environment=development",
+    "vercel:env:sync-db-to-local": "node scripts/merge-vercel-db-env.js",
+    "vercel:env:pull-prod-db-into-local": "vercel env pull .env.vercel.production --environment=production --yes && node scripts/merge-vercel-db-env.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.17.1",
     "bcryptjs": "^3.0.2",
     "jose": "^6.0.10",
-    "prisma": "^6.17.1",
     "next": "16.2.4",
+    "prisma": "^6.17.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.12.2",
     "stripe": "^22.0.2"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "dotenv": "^16.4.5",
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.4.5",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vercel": "^48.9.0"
   }
 }
