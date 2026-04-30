@@ -1,8 +1,10 @@
 import Link from "next/link";
 
 import GuidedChoice from "@/components/GuidedChoice";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { getHomePageCopy } from "@/lib/i18n/home-page";
 import type { SiteLocale } from "@/lib/i18n/locale";
+import { buildHomePageJsonLd } from "@/lib/seo/home-json-ld";
 
 type Props = {
   locale: SiteLocale;
@@ -14,6 +16,7 @@ export function HomePage({ locale }: Props) {
 
   return (
     <main className="min-h-screen bg-[#fafafa] text-[#121212]">
+      <JsonLd data={buildHomePageJsonLd(locale)} />
       <section className="px-6 pt-24 pb-24 max-w-3xl mx-auto">
         <p className="text-xs uppercase tracking-[0.22em] text-[#8a8a8a] mb-8">{home.heroEyebrow}</p>
         <h1

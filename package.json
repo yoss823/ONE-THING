@@ -12,6 +12,9 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "admin:create-user": "tsx scripts/create-admin-user.ts",
+    "vercel:env:pull-production": "vercel env pull .env.vercel.production --environment=production",
+    "vercel:env:pull-preview": "vercel env pull .env.vercel.preview --environment=preview",
+    "vercel:env:pull-development": "vercel env pull .env.vercel.development --environment=development",
     "postinstall": "prisma generate"
   },
   "dependencies": {

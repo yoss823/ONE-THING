@@ -3,13 +3,13 @@ import type { Metadata } from "next";
 import type { SiteLocale } from "@/lib/i18n/locale";
 import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 
-const SEO_TITLE: Record<SiteLocale, string> = {
+export const SEO_TITLE: Record<SiteLocale, string> = {
   en: "ONE THING — one morning action, tailored to your life",
   fr: "ONE THING — une action du matin, adaptée à ta vie",
   es: "ONE THING — una acción matutina, adaptada a tu vida",
 };
 
-const SEO_DESCRIPTION: Record<SiteLocale, string> = {
+export const SEO_DESCRIPTION: Record<SiteLocale, string> = {
   en: "Pick your focus areas and get one clear daily action by email, a weekly recap, and a monthly clarity check. Built for busy people who want progress without overwhelm.",
   fr: "Choisis tes axes et reçois une action claire chaque matin par email, un résumé hebdo et un bilan mensuel. Pour avancer sans te noyer.",
   es: "Elige tus focos y recibe una acción clara cada mañana por email, un resumen semanal y un chequeo mensual. Progreso sin agobio.",
