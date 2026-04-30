@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Plain Node merge helper (CommonJS)
+    "scripts/merge-vercel-db-env.js",
   ]),
 ]);
 

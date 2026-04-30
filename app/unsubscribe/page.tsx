@@ -1,5 +1,6 @@
-'use client';
+"use client";
 
+import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -8,54 +9,22 @@ function UnsubscribeContent() {
   const email = searchParams.get("email");
 
   return (
-    <main
-      style={{
-        alignItems: "center",
-        backgroundColor: "#ffffff",
-        color: "#111111",
-        display: "flex",
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        justifyContent: "center",
-        minHeight: "100vh",
-        padding: "24px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "480px",
-          textAlign: "center",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "32px",
-            fontWeight: 600,
-            letterSpacing: "-0.02em",
-            margin: "0 0 16px",
-          }}
-        >
+    <main className="flex min-h-screen items-center justify-center bg-[#fafafa] px-6 py-12 text-[#121212]">
+      <div className="w-full max-w-md rounded-2xl border border-[#e7e7e7] bg-white px-8 py-10 text-center shadow-sm">
+        <p className="text-xs uppercase tracking-[0.22em] text-[#8a8a8a]">Email</p>
+        <h1 className="mt-3 font-[var(--font-display)] text-2xl tracking-tight sm:text-3xl">
           You&apos;ve been unsubscribed.
         </h1>
-        <p
-          style={{
-            fontSize: "18px",
-            lineHeight: 1.6,
-            margin: 0,
-          }}
-        >
+        <p className="mt-4 text-sm leading-relaxed text-[#555]">
           You won&apos;t receive any more emails from ONE THING.
         </p>
-        {email ? (
-          <p
-            style={{
-              color: "#666666",
-              fontSize: "14px",
-              margin: "16px 0 0",
-            }}
-          >
-            {email}
-          </p>
-        ) : null}
+        {email ? <p className="mt-6 text-xs text-[#8a8a8a]">{email}</p> : null}
+        <Link
+          href="/"
+          className="mt-8 inline-block text-sm font-medium text-[#121212] underline underline-offset-4 hover:text-[#444]"
+        >
+          Back to home
+        </Link>
       </div>
     </main>
   );
@@ -63,7 +32,13 @@ function UnsubscribeContent() {
 
 export default function UnsubscribePage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-[#fafafa] px-6">
+          <p className="text-sm text-[#888]">Loading…</p>
+        </main>
+      }
+    >
       <UnsubscribeContent />
     </Suspense>
   );

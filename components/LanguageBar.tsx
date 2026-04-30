@@ -18,6 +18,8 @@ const HIDDEN_PREFIXES = [
   "/checkout/success",
   "/account",
   "/admin",
+  "/unsubscribe",
+  "/tracked",
 ];
 
 function shouldHideLanguageBar(pathname: string | null): boolean {

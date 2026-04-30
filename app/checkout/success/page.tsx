@@ -37,7 +37,7 @@ export default async function CheckoutSuccessPage({
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                className="inline-flex items-center justify-center rounded-full bg-[var(--foreground)] px-6 py-3 text-sm font-semibold text-[var(--background)] transition hover:bg-[#213329]"
+                className="inline-flex items-center justify-center rounded-full bg-[var(--foreground)] px-6 py-3 text-sm font-semibold text-[var(--background)] transition hover:bg-[#2a2a2a]"
                 href={successPage.primaryCta.href}
               >
                 {successPage.primaryCta.label}
@@ -51,15 +51,15 @@ export default async function CheckoutSuccessPage({
             </div>
           </article>
 
-          <article className="rounded-[2rem] border border-[rgba(24,38,29,0.08)] bg-[rgba(255,249,240,0.88)] p-8 shadow-[var(--shadow)] md:p-10">
+          <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--background-strong)] p-8 shadow-[var(--shadow)] md:p-10">
             <p className="text-sm uppercase tracking-[0.28em] text-[var(--accent)]">{successPage.nextSteps}</p>
             <div className="mt-5 space-y-4">
               {successPage.checklist.map((item, index) => (
                 <div
                   key={item}
-                  className="rounded-[1.4rem] border border-[rgba(24,38,29,0.08)] bg-[rgba(255,255,255,0.5)] p-5"
+                  className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--panel)] p-5"
                 >
-                  <p className="text-xs uppercase tracking-[0.22em] text-[var(--accent)]">
+                  <p className="text-xs uppercase tracking-[0.22em] text-[var(--foreground-soft)]">
                     {successPage.stepLabel(index + 1)}
                   </p>
                   <p className="mt-3 text-base leading-7 text-[var(--foreground)]">{item}</p>

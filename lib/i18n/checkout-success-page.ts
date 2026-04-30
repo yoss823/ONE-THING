@@ -11,10 +11,12 @@ export type CheckoutSuccessCopy = {
   secondaryCta: { label: string; href: string };
 };
 
-const PRIMARY_HREF = "/#email-previews";
-const SECONDARY_HREF = "/#pricing";
+type CheckoutSuccessCopyBase = Omit<CheckoutSuccessCopy, "primaryCta" | "secondaryCta"> & {
+  primaryCta: { label: string };
+  secondaryCta: { label: string };
+};
 
-const COPY: Record<SiteLocale, CheckoutSuccessCopy> = {
+const COPY: Record<SiteLocale, CheckoutSuccessCopyBase> = {
   en: {
     eyebrow: "Payment confirmed",
     title: "ONE THING is scheduled.",
@@ -28,8 +30,8 @@ const COPY: Record<SiteLocale, CheckoutSuccessCopy> = {
     ],
     nextSteps: "Next steps",
     stepLabel: (n) => `Step ${n}`,
-    primaryCta: { label: "Read the daily email format", href: PRIMARY_HREF },
-    secondaryCta: { label: "Back to pricing", href: SECONDARY_HREF },
+    primaryCta: { label: "Read the daily email format" },
+    secondaryCta: { label: "Back to pricing" },
   },
   fr: {
     eyebrow: "Paiement confirmé",
@@ -44,8 +46,8 @@ const COPY: Record<SiteLocale, CheckoutSuccessCopy> = {
     ],
     nextSteps: "Étapes suivantes",
     stepLabel: (n) => `Étape ${n}`,
-    primaryCta: { label: "Voir le format de l’e-mail quotidien", href: PRIMARY_HREF },
-    secondaryCta: { label: "Retour aux tarifs", href: SECONDARY_HREF },
+    primaryCta: { label: "Voir le format de l’e-mail quotidien" },
+    secondaryCta: { label: "Retour aux tarifs" },
   },
   es: {
     eyebrow: "Pago confirmado",
@@ -60,11 +62,17 @@ const COPY: Record<SiteLocale, CheckoutSuccessCopy> = {
     ],
     nextSteps: "Próximos pasos",
     stepLabel: (n) => `Paso ${n}`,
-    primaryCta: { label: "Ver el formato del correo diario", href: PRIMARY_HREF },
-    secondaryCta: { label: "Volver a precios", href: SECONDARY_HREF },
+    primaryCta: { label: "Ver el formato del correo diario" },
+    secondaryCta: { label: "Volver a precios" },
   },
 };
 
 export function getCheckoutSuccessCopy(locale: SiteLocale): CheckoutSuccessCopy {
-  return COPY[locale] ?? COPY.en;
+  const base = COPY[locale] ?? COPY.en;
+  const path = `/l/${locale}`;
+  return {
+    ...base,
+    primaryCta: { label: base.primaryCta.label, href: `${path}#email-previews` },
+    secondaryCta: { label: base.secondaryCta.label, href: `${path}#pricing` },
+  };
 }

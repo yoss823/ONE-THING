@@ -65,7 +65,7 @@ export function HomePage({ locale }: Props) {
 
       <div className="border-t border-[#e7e7e7]" />
 
-      <section className="px-6 py-20 max-w-3xl mx-auto">
+      <section id="email-previews" className="scroll-mt-8 px-6 py-20 max-w-3xl mx-auto">
         <p className="text-xs text-[#8b8b8b] mb-7 uppercase tracking-[0.18em]">{home.demoTitle}</p>
         <div className="email-card border border-[#e7e7e7] rounded-2xl p-7 max-w-md mx-auto font-mono text-sm bg-white">
           <p className="email-line-1 text-xs text-[#8a8a8a] mb-4">{home.demoSubject}</p>
@@ -116,7 +116,7 @@ export function HomePage({ locale }: Props) {
 
       <div className="border-t border-[#e7e7e7]" />
 
-      <section className="px-6 py-20 max-w-3xl mx-auto">
+      <section id="pricing" className="scroll-mt-8 px-6 py-20 max-w-3xl mx-auto">
         <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-[#8b8b8b] mb-8">
           {home.pricingTitle}
         </h2>
