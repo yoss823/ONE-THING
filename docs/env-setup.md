@@ -19,6 +19,7 @@ Rules:
 | `APP_URL` | No | Set this to the app base URL for the target environment. | Production should use `https://onestep.nanocorp.app`. For local development, use `http://localhost:3000`. No trailing slash. |
 | `NEXT_PUBLIC_BASE_URL` | Yes | Set this to the public app base URL for the target environment. | Must match the exact deployed URL used for checkout success, cancel, and email links. No trailing slash. |
 | `ADMIN_EXPORT_TOKEN` | No | Generate a long random secret with a password manager or `openssl rand -hex 16`. | Server-only admin token from `.env.example`. |
+| `ADMIN_JWT_SECRET` | No | Generate with `openssl rand -hex 32` (at least 16 characters). | Signs the httpOnly session cookie for `/admin`. Required to use the admin dashboard. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase -> Project Settings -> API -> Project URL. | Public Supabase project URL. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase -> Project Settings -> API -> anon public key. | Safe for browser use. |
 | `SUPABASE_SERVICE_ROLE_KEY` | No | Supabase -> Project Settings -> API -> service_role key. | Server-only. Never expose this in the client. |
@@ -66,6 +67,18 @@ Generate the cron secret with:
 ```bash
 openssl rand -hex 16
 ```
+
+## Admin dashboard (`/admin`)
+
+1. Set `ADMIN_JWT_SECRET` in the deployment environment (see table above).
+2. Run database migrations so `admin_users` exists (`prisma migrate deploy` runs during `npm run build` on Vercel).
+3. Create your admin login locally (or anywhere with `DATABASE_URL`):
+
+```bash
+npm run admin:create-user -- you@example.com 'your-long-password'
+```
+
+Password reset emails use `RESEND_API_KEY`, `EMAIL_FROM` / `RESEND_FROM`, and a resolvable `APP_URL` (or `NEXT_PUBLIC_BASE_URL` / `VERCEL_URL`) for links.
 
 ## Current Vercel Status Checked During This Task
 

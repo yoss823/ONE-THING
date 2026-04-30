@@ -12,7 +12,13 @@ const OPTIONS: Array<{ value: SiteLocale; label: string }> = [
   { value: "es", label: "ES" },
 ];
 
-const HIDDEN_PREFIXES = ["/onboarding", "/welcome", "/checkout/success", "/account"];
+const HIDDEN_PREFIXES = [
+  "/onboarding",
+  "/welcome",
+  "/checkout/success",
+  "/account",
+  "/admin",
+];
 
 function shouldHideLanguageBar(pathname: string | null): boolean {
   if (!pathname) return false;

@@ -6,6 +6,7 @@ import "./globals.css";
 
 import { LanguageBar } from "@/components/LanguageBar";
 import { normalizeSiteLocale } from "@/lib/i18n/locale";
+import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -18,7 +19,12 @@ const ibmPlexSans = IBM_Plex_Sans({
   variable: "--font-body",
 });
 
+const defaultMetadataBase = new URL(
+  tryResolvePublicBaseUrl() ?? "https://one-thing-nu.vercel.app",
+);
+
 export const metadata: Metadata = {
+  metadataBase: defaultMetadataBase,
   title: "ONE THING",
   description:
     "ONE THING sends one clear morning action for the categories you selected, plus a weekly summary and a monthly clarity check.",
