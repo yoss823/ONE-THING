@@ -1,6 +1,9 @@
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
 
 import bcrypt from "bcryptjs";
+
+loadEnv({ path: ".env" });
+loadEnv({ path: ".env.local", override: true });
 
 import { prisma } from "../lib/db";
 
