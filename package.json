@@ -11,10 +11,13 @@
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
+    "admin:create-user": "tsx scripts/create-admin-user.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.17.1",
+    "bcryptjs": "^3.0.2",
+    "jose": "^6.0.10",
     "prisma": "^6.17.1",
     "next": "16.2.4",
     "react": "19.2.4",
@@ -23,6 +26,7 @@
     "stripe": "^22.0.2"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "dotenv": "^16.4.5",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
