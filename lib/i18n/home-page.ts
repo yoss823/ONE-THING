@@ -35,6 +35,11 @@ export type HomePageCopy = {
   pricingTitle: string;
   plans: Array<{ label: string; price: string; period: string }>;
   footerBrand: string;
+  footerBackHome: string;
+  footerFaq: string;
+  footerLegal: string;
+  footerPrivacy: string;
+  footerContact: string;
 };
 
 const COPY: Record<SiteLocale, HomePageCopy> = {
@@ -94,6 +99,11 @@ const COPY: Record<SiteLocale, HomePageCopy> = {
       { label: "3 categories", price: "$9.99", period: "/month" },
     ],
     footerBrand: "ONE THING",
+    footerBackHome: "Back to home",
+    footerFaq: "FAQ",
+    footerLegal: "Legal notice",
+    footerPrivacy: "Privacy policy",
+    footerContact: "Contact",
   },
   fr: {
     heroEyebrow: "Un outil discret pour vos matins",
@@ -151,6 +161,11 @@ const COPY: Record<SiteLocale, HomePageCopy> = {
       { label: "3 catégories", price: "9,99 $US", period: "/mois" },
     ],
     footerBrand: "ONE THING",
+    footerBackHome: "Retour à l’accueil",
+    footerFaq: "FAQ",
+    footerLegal: "Mentions légales",
+    footerPrivacy: "Politique de confidentialité",
+    footerContact: "Contact",
   },
   es: {
     heroEyebrow: "Software discreto para las mañanas",
@@ -208,6 +223,11 @@ const COPY: Record<SiteLocale, HomePageCopy> = {
       { label: "3 categorías", price: "US$9.99", period: "/mes" },
     ],
     footerBrand: "ONE THING",
+    footerBackHome: "Volver al inicio",
+    footerFaq: "Preguntas frecuentes",
+    footerLegal: "Aviso legal",
+    footerPrivacy: "Política de privacidad",
+    footerContact: "Contacto",
   },
 };
 

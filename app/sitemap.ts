@@ -11,13 +11,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const weekly = "weekly" as const;
 
+  const supporting = ["faq", "legal", "privacy"] as const;
+
   return [
     { url: `${base}/`, lastModified: now, changeFrequency: weekly, priority: 1 },
-    ...locales.map((locale) => ({
-      url: `${base}/l/${locale}`,
-      lastModified: now,
-      changeFrequency: weekly,
-      priority: 0.9,
-    })),
+    ...locales.flatMap((locale) => [
+      {
+        url: `${base}/l/${locale}`,
+        lastModified: now,
+        changeFrequency: weekly,
+        priority: 0.9,
+      },
+      ...supporting.map((slug) => ({
+        url: `${base}/l/${locale}/${slug}`,
+        lastModified: now,
+        changeFrequency: weekly,
+        priority: 0.75,
+      })),
+    ]),
   ];
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import GuidedChoice from "@/components/GuidedChoice";
+import { CONTACT_EMAIL } from "@/lib/site/contact";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { getHomePageCopy } from "@/lib/i18n/home-page";
 import type { SiteLocale } from "@/lib/i18n/locale";
@@ -150,6 +151,23 @@ export function HomePage({ locale }: Props) {
 
       <footer className="px-6 py-12 max-w-3xl mx-auto">
         <p className="text-sm text-[#8a8a8a]">{home.footerBrand}</p>
+        <nav
+          className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[#666]"
+          aria-label="Legal and help"
+        >
+          <Link href={`/l/${locale}/faq`} className="underline underline-offset-4 hover:text-[#111]">
+            {home.footerFaq}
+          </Link>
+          <Link href={`/l/${locale}/legal`} className="underline underline-offset-4 hover:text-[#111]">
+            {home.footerLegal}
+          </Link>
+          <Link href={`/l/${locale}/privacy`} className="underline underline-offset-4 hover:text-[#111]">
+            {home.footerPrivacy}
+          </Link>
+          <a href={`mailto:${CONTACT_EMAIL}`} className="underline underline-offset-4 hover:text-[#111]">
+            {home.footerContact}
+          </a>
+        </nav>
       </footer>
     </main>
   );
