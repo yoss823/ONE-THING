@@ -68,6 +68,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
   const [email, setEmail] = useState("");
   const [isResolvingAccess, setIsResolvingAccess] = useState(false);
   const [overview, setOverview] = useState<{
+    timezone: string;
     planLabel: string;
     planThemeLimit: number;
     changesRemainingThisMonth: number;
@@ -162,6 +163,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
         );
         const data = (await response.json()) as {
           error?: string;
+          timezone?: string;
           planLabel?: string;
           planThemeLimit?: number;
           changesRemainingThisMonth?: number;
@@ -208,6 +210,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
         }
 
         if (
+          typeof data.timezone !== "string" ||
           !data.planLabel ||
           typeof data.planThemeLimit !== "number" ||
           !data.progress ||
@@ -236,6 +239,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
             toThemeOptionValue(theme),
           );
           setOverview({
+            timezone: data.timezone,
             planLabel: data.planLabel,
             planThemeLimit: data.planThemeLimit,
             changesRemainingThisMonth: data.changesRemainingThisMonth ?? 0,
@@ -627,6 +631,13 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
               </span>
             </p>
             <p className="mt-2 text-xs text-[#999] max-w-prose">{ui.subscriptionSingleNote}</p>
+            <div className="mt-4 rounded-xl border border-[#e7e7e7] bg-[#fafafa] px-4 py-3 text-left">
+              <p className="text-xs uppercase tracking-wide text-[#8b8b8b]">{ui.deliveryTimezoneLabel}</p>
+              <p className="mt-2 font-mono text-sm text-[#121212] break-all">
+                {isLoadingOverview ? "…" : overview?.timezone ?? "—"}
+              </p>
+              <p className="mt-2 text-xs text-[#777] leading-relaxed">{ui.deliveryTimezoneHelp}</p>
+            </div>
             {(overview?.planThemeLimit ?? 1) < 3 ? (
               <div className="mt-4 rounded-xl border border-[#e7e7e7] bg-white p-4">
                 <p className="text-sm text-[#222]">{ui.needMoreThemes}</p>

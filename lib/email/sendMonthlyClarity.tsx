@@ -1,10 +1,11 @@
 import { Resend } from "resend";
 
+import type { MonthlyClarityEmailProps } from "@/lib/i18n/monthly-clarity-email";
 import {
-  MonthlyClarityEmailProps,
   generateMonthlyClarityHtml,
   generateMonthlyClarityText,
-} from "@/emails/MonthlyClarityEmail";
+  getMonthlyClaritySubject,
+} from "@/lib/i18n/monthly-clarity-email";
 import { getEmailFrom } from "@/lib/email/sender";
 
 function getResendClient(): Resend {
@@ -20,7 +21,7 @@ function getResendClient(): Resend {
 export async function sendMonthlyClarityEmail(
   params: MonthlyClarityEmailProps & { userEmail: string },
 ): Promise<void> {
-  const subject = params.isFirstMonth === false ? "Another month." : "One month in.";
+  const subject = getMonthlyClaritySubject(params.locale, params.isFirstMonth);
   const replyTo = process.env.EMAIL_REPLY_TO?.trim() || undefined;
   const resend = getResendClient();
 

@@ -11,6 +11,7 @@ import { selectDailyEmailActions } from "@/lib/email/daily-selection";
 import { formatCategoryLabel } from "@/lib/email/category-labels";
 import { sendDailyActionEmail } from "@/lib/email/sendDailyAction";
 import { sendMonthlyClarityEmail } from "@/lib/email/sendMonthlyClarity";
+import { normalizeSiteLocale, type SiteLocale } from "@/lib/i18n/locale";
 import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 
 function isPrismaUniqueConstraintViolation(error: unknown): boolean {
@@ -171,14 +172,15 @@ function formatDailyDateLabel(instant: Date, timeZone: string): string {
   }).format(instant);
 }
 
-function getPreviousMonthName(snapshot: LocalTimeSnapshot): string {
+function getPreviousMonthDisplay(snapshot: LocalTimeSnapshot, locale: SiteLocale): string {
   const year = snapshot.month === 1 ? snapshot.year - 1 : snapshot.year;
-  const month = snapshot.month === 1 ? 11 : snapshot.month - 2;
+  const monthIndex = snapshot.month === 1 ? 11 : snapshot.month - 2;
+  const intlLocale = locale === "fr" ? "fr-FR" : locale === "es" ? "es-ES" : "en-US";
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(intlLocale, {
     month: "long",
     timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month, 1)));
+  }).format(new Date(Date.UTC(year, monthIndex, 1)));
 }
 
 function buildDailySummary(): CronSummary {
@@ -578,7 +580,10 @@ export async function handleMonthlyClarityEmailCron(
       const skippedLogs = recentDailyLogs.filter(
         (log) => log.status === DailyDeliveryStatus.SKIPPED,
       );
-      const currentCategories = user.preference.categories.map(formatCategoryLabel);
+      const mailLocale = normalizeSiteLocale(user.preference.locale ?? "en");
+      const currentCategories = user.preference.categories.map((cat) =>
+        formatCategoryLabel(cat, mailLocale),
+      );
       const topCategory = chooseTopCategory(
         user.preference.categories,
         completedLogs,
@@ -586,10 +591,10 @@ export async function handleMonthlyClarityEmailCron(
 
       await sendMonthlyClarityEmail({
         userEmail: user.email,
-        monthName: getPreviousMonthName(localSnapshot),
+        monthName: getPreviousMonthDisplay(localSnapshot, mailLocale),
         completedCount: completedLogs.length,
         skippedCount: skippedLogs.length,
-        topCategory: formatCategoryLabel(topCategory),
+        topCategory: formatCategoryLabel(topCategory, mailLocale),
         currentCategories,
         upgradeUrl:
           user.preference.categories.length === 1
@@ -597,6 +602,7 @@ export async function handleMonthlyClarityEmailCron(
             : undefined,
         unsubscribeUrl: new URL("/unsubscribe", baseUrl).toString(),
         isFirstMonth: priorMonthlyCount === 0,
+        locale: mailLocale,
       });
 
       await prisma.dailyDeliveryLog.create({

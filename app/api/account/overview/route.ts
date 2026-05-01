@@ -171,6 +171,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     ok: true,
+    timezone: user.timezone ?? "UTC",
     planLabel: PLAN_LABELS[user.subscription.plan] ?? user.subscription.plan,
     planThemeLimit: PLAN_THEME_LIMITS[user.subscription.plan] ?? 1,
     subscriptionStatus: user.subscription.status,

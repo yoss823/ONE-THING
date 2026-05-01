@@ -30,6 +30,8 @@ export type AccountUiCopy = {
   energyHigh: string;
   languageEmails: string;
   languageHint: string;
+  deliveryTimezoneLabel: string;
+  deliveryTimezoneHelp: string;
   errNoSubscription: string;
   subscriptionSingleNote: string;
   saveSettings: string;
@@ -101,7 +103,10 @@ const COPY: Record<SiteLocale, AccountUiCopy> = {
     energyHigh: "High",
     languageEmails: "Language",
     languageHint:
-      "Used for daily emails and this page. Changing it saves immediately and updates the site language.",
+      "Used for daily emails, the monthly recap email, and this page. Changing it saves immediately and updates the site language.",
+    deliveryTimezoneLabel: "Email delivery timezone",
+    deliveryTimezoneHelp:
+      "Daily and monthly emails are sent between 8:00 and 8:20 AM in this timezone. On the 1st of each month, only the monthly recap is sent (no separate daily action that day).",
     errNoSubscription:
       "No active subscription is linked to this link yet. Wait a minute after payment, or open the account link from your welcome email.",
     subscriptionSingleNote:
@@ -182,7 +187,10 @@ const COPY: Record<SiteLocale, AccountUiCopy> = {
     energyHigh: "Élevé",
     languageEmails: "Langue",
     languageHint:
-      "Utilisée pour les e-mails quotidiens et cette page. Le changement est enregistré tout de suite et met à jour la langue du site.",
+      "Utilisée pour les e-mails quotidiens, le bilan mensuel et cette page. Le changement est enregistré tout de suite et met à jour la langue du site.",
+    deliveryTimezoneLabel: "Fuseau horaire des e-mails",
+    deliveryTimezoneHelp:
+      "Les e-mails quotidiens et le bilan mensuel partent entre 8h00 et 8h20 (heure de ce fuseau). Le 1er du mois, seul le bilan mensuel est envoyé (pas d’e-mail d’action séparé ce jour-là).",
     errNoSubscription:
       "Aucun abonnement actif n’est encore lié à ce lien. Attendez une minute après le paiement, ou ouvrez le lien « compte » depuis l’e-mail de bienvenue.",
     subscriptionSingleNote:
@@ -262,7 +270,10 @@ const COPY: Record<SiteLocale, AccountUiCopy> = {
     energyHigh: "Alta",
     languageEmails: "Idioma",
     languageHint:
-      "Se usa en los correos diarios y en esta página. Al cambiarlo se guarda al momento y actualiza el idioma del sitio.",
+      "Se usa en los correos diarios, el resumen mensual y en esta página. Al cambiarlo se guarda al momento y actualiza el idioma del sitio.",
+    deliveryTimezoneLabel: "Zona horaria de envío",
+    deliveryTimezoneHelp:
+      "Los correos diarios y el resumen mensual se envían entre las 8:00 y las 8:20 (hora de esta zona). El día 1 de cada mes solo se envía el resumen mensual (no hay correo de acción diaria ese día).",
     errNoSubscription:
       "Aún no hay una suscripción activa vinculada a este enlace. Espera un minuto tras el pago o abre el enlace de cuenta del correo de bienvenida.",
     subscriptionSingleNote:
