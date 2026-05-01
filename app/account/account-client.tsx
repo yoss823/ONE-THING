@@ -27,6 +27,27 @@ const LOCALE_OPTIONS = [
   { value: "es", label: "Español" },
 ];
 
+const EMAIL_TIMEZONE_OPTIONS = [
+  { value: "Europe/Paris", label: "Europe/Paris" },
+  { value: "Europe/Brussels", label: "Europe/Brussels" },
+  { value: "Europe/Zurich", label: "Europe/Zurich" },
+  { value: "Europe/London", label: "Europe/London" },
+  { value: "Europe/Madrid", label: "Europe/Madrid" },
+  { value: "Europe/Berlin", label: "Europe/Berlin" },
+  { value: "America/New_York", label: "America/New_York" },
+  { value: "America/Los_Angeles", label: "America/Los_Angeles" },
+  { value: "America/Montreal", label: "America/Montreal" },
+  { value: "UTC", label: "UTC" },
+];
+
+function buildTimezoneSelectOptions(current: string | undefined) {
+  const base = [...EMAIL_TIMEZONE_OPTIONS];
+  if (current && !base.some((o) => o.value === current)) {
+    base.unshift({ value: current, label: current });
+  }
+  return base;
+}
+
 const DB_THEME_TO_OPTION: Record<string, string> = {
   MENTAL_CLARITY: "mental_clarity",
   ORGANIZATION: "organization",
@@ -108,6 +129,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
   const [energyLevel, setEnergyLevel] = useState<number>(2);
   const [availableMinutes, setAvailableMinutes] = useState<number>(10);
   const [locale, setLocale] = useState<string>("en");
+  const [deliveryTimezone, setDeliveryTimezone] = useState<string>("UTC");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [checkinMood, setCheckinMood] = useState<string>("right");
   const [checkinNote, setCheckinNote] = useState("");
@@ -238,6 +260,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
           const normalizedThemes = data.currentThemes.map((theme) =>
             toThemeOptionValue(theme),
           );
+          setDeliveryTimezone(data.timezone);
           setOverview({
             timezone: data.timezone,
             planLabel: data.planLabel,
@@ -322,6 +345,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
           energyLevel,
           availableMinutes,
           locale,
+          timezone: deliveryTimezone,
         }),
       });
       const data = (await response.json()) as {
@@ -329,6 +353,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
         energyLevel?: number;
         availableMinutes?: number;
         locale?: string;
+        timezone?: string;
       };
 
       if (!response.ok) {
@@ -340,6 +365,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
         prev
           ? {
               ...prev,
+              timezone: data.timezone ?? deliveryTimezone,
               currentSettings: {
                 energyLevel: data.energyLevel ?? energyLevel,
                 availableMinutes: data.availableMinutes ?? availableMinutes,
@@ -348,6 +374,9 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
             }
           : prev,
       );
+      if (typeof data.timezone === "string") {
+        setDeliveryTimezone(data.timezone);
+      }
       const nextLoc = data.locale ?? locale;
       setLocale(nextLoc);
       document.cookie = `onestep_locale=${nextLoc};path=/;max-age=31536000;SameSite=Lax`;
@@ -379,7 +408,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
         },
         body: JSON.stringify({ userId, locale: nextLocale }),
       });
-      const data = (await response.json()) as { error?: string; locale?: string };
+      const data = (await response.json()) as { error?: string; locale?: string; timezone?: string };
 
       if (!response.ok) {
         setError(data.error ?? ui.errUpdateSettings);
@@ -390,6 +419,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
         prev
           ? {
               ...prev,
+              timezone: typeof data.timezone === "string" ? data.timezone : prev.timezone,
               currentSettings: {
                 ...prev.currentSettings,
                 locale: data.locale ?? nextLocale,
@@ -636,7 +666,23 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
               <p className="mt-2 font-mono text-sm text-[#121212] break-all">
                 {isLoadingOverview ? "…" : overview?.timezone ?? "—"}
               </p>
-              <p className="mt-2 text-xs text-[#777] leading-relaxed">{ui.deliveryTimezoneHelp}</p>
+              <label className="mt-4 block text-xs font-medium text-[#555]" htmlFor="delivery-timezone">
+                {ui.timezoneSelectLabel}
+              </label>
+              <select
+                id="delivery-timezone"
+                value={deliveryTimezone}
+                onChange={(e) => setDeliveryTimezone(e.target.value)}
+                className="mt-1 w-full max-w-md rounded-lg border border-[#e0e0e0] bg-white px-3 py-2 text-sm text-[#121212] outline-none focus:ring-2 focus:ring-[#121212]"
+              >
+                {buildTimezoneSelectOptions(overview?.timezone).map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-[#777] leading-relaxed">{ui.timezoneSelectHint}</p>
+              <p className="mt-3 text-xs text-[#777] leading-relaxed">{ui.deliveryTimezoneHelp}</p>
             </div>
             {(overview?.planThemeLimit ?? 1) < 3 ? (
               <div className="mt-4 rounded-xl border border-[#e7e7e7] bg-white p-4">

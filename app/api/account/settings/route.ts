@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
 import { isSiteLocale } from "@/lib/i18n/locale";
+import { isValidIanaTimezone } from "@/lib/timezone/iana";
 
 type UpdateSettingsBody = {
   userId?: string;
   energyLevel?: number;
   availableMinutes?: number;
   locale?: string;
+  timezone?: string;
 };
 
 export async function POST(request: Request) {
@@ -29,9 +31,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "locale must be en, fr, or es." }, { status: 400 });
   }
 
+  if (body.timezone !== undefined) {
+    const tz = typeof body.timezone === "string" ? body.timezone.trim() : "";
+    if (!tz || !isValidIanaTimezone(tz)) {
+      return NextResponse.json({ error: "timezone must be a valid IANA name (e.g. Europe/Paris)." }, { status: 400 });
+    }
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
+      timezone: true,
       subscription: {
         select: {
           status: true,
@@ -72,15 +82,30 @@ export async function POST(request: Request) {
       ? body.locale
       : (user.preference.locale ?? "en");
 
+  const resolvedTimezone =
+    body.timezone !== undefined && typeof body.timezone === "string" && isValidIanaTimezone(body.timezone)
+      ? body.timezone.trim()
+      : (user.timezone?.trim() || "UTC");
+
   try {
-    await prisma.userPreference.update({
-      where: { userId },
-      data: {
-        energyLevel: resolvedEnergy,
-        availableMinutes: resolvedMinutes,
-        locale: resolvedLocale,
-      },
-    });
+    await prisma.$transaction([
+      prisma.userPreference.update({
+        where: { userId },
+        data: {
+          energyLevel: resolvedEnergy,
+          availableMinutes: resolvedMinutes,
+          locale: resolvedLocale,
+        },
+      }),
+      ...(body.timezone !== undefined
+        ? [
+            prisma.user.update({
+              where: { id: userId },
+              data: { timezone: resolvedTimezone },
+            }),
+          ]
+        : []),
+    ]);
   } catch (error) {
     console.error("Failed to update account settings.", error);
     return NextResponse.json(
@@ -94,5 +119,6 @@ export async function POST(request: Request) {
     energyLevel: resolvedEnergy,
     availableMinutes: resolvedMinutes,
     locale: resolvedLocale,
+    timezone: resolvedTimezone,
   });
 }

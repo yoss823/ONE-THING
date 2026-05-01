@@ -32,6 +32,8 @@ export type AccountUiCopy = {
   languageHint: string;
   deliveryTimezoneLabel: string;
   deliveryTimezoneHelp: string;
+  timezoneSelectLabel: string;
+  timezoneSelectHint: string;
   errNoSubscription: string;
   subscriptionSingleNote: string;
   saveSettings: string;
@@ -107,6 +109,9 @@ const COPY: Record<SiteLocale, AccountUiCopy> = {
     deliveryTimezoneLabel: "Email delivery timezone",
     deliveryTimezoneHelp:
       "Daily and monthly emails are sent between 8:00 and 8:20 AM in this timezone. On the 1st of each month, only the monthly recap is sent (no separate daily action that day).",
+    timezoneSelectLabel: "Change delivery timezone",
+    timezoneSelectHint:
+      "UTC is not “wrong”, but it is not your wall clock in France. Pick the city that matches your mornings (France → Europe/Paris), then save settings.",
     errNoSubscription:
       "No active subscription is linked to this link yet. Wait a minute after payment, or open the account link from your welcome email.",
     subscriptionSingleNote:
@@ -191,6 +196,9 @@ const COPY: Record<SiteLocale, AccountUiCopy> = {
     deliveryTimezoneLabel: "Fuseau horaire des e-mails",
     deliveryTimezoneHelp:
       "Les e-mails quotidiens et le bilan mensuel partent entre 8h00 et 8h20 (heure de ce fuseau). Le 1er du mois, seul le bilan mensuel est envoyé (pas d’e-mail d’action séparé ce jour-là).",
+    timezoneSelectLabel: "Changer le fuseau horaire",
+    timezoneSelectHint:
+      "UTC n’est pas une erreur, mais ce n’est pas l’heure affichée sur ton réveil en France. Choisis la ville qui correspond à tes matinées (France → Europe/Paris), puis enregistre les réglages.",
     errNoSubscription:
       "Aucun abonnement actif n’est encore lié à ce lien. Attendez une minute après le paiement, ou ouvrez le lien « compte » depuis l’e-mail de bienvenue.",
     subscriptionSingleNote:
@@ -274,6 +282,9 @@ const COPY: Record<SiteLocale, AccountUiCopy> = {
     deliveryTimezoneLabel: "Zona horaria de envío",
     deliveryTimezoneHelp:
       "Los correos diarios y el resumen mensual se envían entre las 8:00 y las 8:20 (hora de esta zona). El día 1 de cada mes solo se envía el resumen mensual (no hay correo de acción diaria ese día).",
+    timezoneSelectLabel: "Cambiar la zona horaria",
+    timezoneSelectHint:
+      "UTC no es un fallo, pero no coincide con tu reloj local. Elige la ciudad de tus mañanas (España peninsular → Europe/Madrid), luego guarda los ajustes.",
     errNoSubscription:
       "Aún no hay una suscripción activa vinculada a este enlace. Espera un minuto tras el pago o abre el enlace de cuenta del correo de bienvenida.",
     subscriptionSingleNote:
