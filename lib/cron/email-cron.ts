@@ -2,14 +2,23 @@ import {
   ActionCategory,
   DailyDeliveryStatus,
   DailyDeliveryType,
-  UserEventType,
 } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import {
+  getLocalTimeSnapshot,
+  isDueAtEightAm,
+  resolveTimezone,
+  subtractLocalDays,
+  toLocalDateValue,
+  type LocalTimeSnapshot,
+} from "@/lib/daily/local-calendar";
+import {
+  isDailyActionEmailEnabled,
+  materializeTodayDailyDelivery,
+} from "@/lib/daily/materialize-today-delivery";
 import { prisma } from "@/lib/db";
-import { selectDailyEmailActions } from "@/lib/email/daily-selection";
 import { formatCategoryLabel } from "@/lib/email/category-labels";
-import { sendDailyActionEmail } from "@/lib/email/sendDailyAction";
 import { sendMonthlyClarityEmail } from "@/lib/email/sendMonthlyClarity";
 import { normalizeSiteLocale, type SiteLocale } from "@/lib/i18n/locale";
 import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
@@ -22,18 +31,6 @@ function isPrismaUniqueConstraintViolation(error: unknown): boolean {
     (error as { code?: string }).code === "P2002"
   );
 }
-
-const TARGET_SEND_HOUR = 8;
-const TARGET_SEND_MINUTE = 0;
-const SEND_WINDOW_MINUTES = 20;
-
-type LocalTimeSnapshot = {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
-};
 
 type ActiveUser = {
   id: string;
@@ -97,79 +94,6 @@ function authorizeCron(request: Request): NextResponse | null {
 
 function resolveBaseUrl(request: Request): string {
   return tryResolvePublicBaseUrl() ?? new URL(request.url).origin;
-}
-
-function resolveTimezone(timezone: string | null | undefined): string {
-  const candidate = timezone?.trim() || "UTC";
-
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: candidate }).format(new Date());
-    return candidate;
-  } catch {
-    return "UTC";
-  }
-}
-
-function getLocalTimeSnapshot(
-  instant: Date,
-  timeZone: string,
-): LocalTimeSnapshot {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-  const parts = formatter.formatToParts(instant);
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, Number.parseInt(part.value, 10)]),
-  );
-
-  return {
-    year: values.year,
-    month: values.month,
-    day: values.day,
-    hour: values.hour,
-    minute: values.minute,
-  };
-}
-
-function toLocalDateValue(snapshot: LocalTimeSnapshot): Date {
-  return new Date(Date.UTC(snapshot.year, snapshot.month - 1, snapshot.day));
-}
-
-function getLocalDateValueFromInstant(instant: Date, timeZone: string): Date {
-  return toLocalDateValue(getLocalTimeSnapshot(instant, timeZone));
-}
-
-function subtractLocalDays(dateValue: Date, days: number): Date {
-  const result = new Date(dateValue);
-  result.setUTCDate(result.getUTCDate() - days);
-  return result;
-}
-
-function isDueAtEightAm(snapshot: LocalTimeSnapshot): boolean {
-  const currentMinutes = snapshot.hour * 60 + snapshot.minute;
-  const targetMinutes = TARGET_SEND_HOUR * 60 + TARGET_SEND_MINUTE;
-
-  return (
-    currentMinutes >= targetMinutes &&
-    currentMinutes <= targetMinutes + SEND_WINDOW_MINUTES
-  );
-}
-
-function formatDailyDateLabel(instant: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  }).format(instant);
 }
 
 function getPreviousMonthDisplay(snapshot: LocalTimeSnapshot, locale: SiteLocale): string {
@@ -267,34 +191,6 @@ async function loadActiveUsers(): Promise<ActiveUser[]> {
   });
 }
 
-async function logDailySend(params: {
-  userId: string;
-  localDate: Date;
-  actions: Array<{ actionId: string }>;
-  sentAt: Date;
-}) {
-  await prisma.$transaction([
-    prisma.dailyDeliveryLog.createMany({
-      data: params.actions.map((action) => ({
-        userId: params.userId,
-        actionId: action.actionId,
-        type: DailyDeliveryType.DAILY,
-        status: DailyDeliveryStatus.SENT,
-        localDate: params.localDate,
-        sentAt: params.sentAt,
-      })),
-    }),
-    prisma.userEvent.createMany({
-      data: params.actions.map((action) => ({
-        userId: params.userId,
-        actionId: action.actionId,
-        eventType: UserEventType.SENT,
-        createdAt: params.sentAt,
-      })),
-    }),
-  ]);
-}
-
 function chooseTopCategory(
   categories: ActionCategory[],
   completedLogs: Array<{
@@ -362,113 +258,54 @@ export async function handleDailyEmailCron(
 
     summary.dueUsers += 1;
 
-    const localDate = toLocalDateValue(localSnapshot);
-    const signupLocalDate = getLocalDateValueFromInstant(user.createdAt, timezone);
-
-    if (signupLocalDate >= localDate) {
-      logSkip("daily", user.id, "signup_day");
-      continue;
-    }
-
-    const [monthlyLog, existingDailyLog] = await Promise.all([
-      prisma.dailyDeliveryLog.findFirst({
-        where: {
-          userId: user.id,
-          type: DailyDeliveryType.MONTHLY_CLARITY,
-          localDate,
-        },
-        select: { id: true },
-      }),
-      prisma.dailyDeliveryLog.findFirst({
-        where: {
-          userId: user.id,
-          type: DailyDeliveryType.DAILY,
-          localDate,
-        },
-        select: { id: true },
-      }),
-    ]);
-
-    if (monthlyLog) {
-      summary.skippedMonthly += 1;
-      logSkip("daily", user.id, "monthly_already_sent_today");
-      continue;
-    }
-
-    if (existingDailyLog) {
-      summary.skippedExisting += 1;
-      logSkip("daily", user.id, "daily_already_sent_today");
-      continue;
-    }
-
-    const lockAcquired = await acquireDeliveryWindowLock({
+    const materializeResult = await materializeTodayDailyDelivery({
       userId: user.id,
-      type: DailyDeliveryType.DAILY,
-      localDate,
+      now,
+      baseUrl,
+      sendEmails: isDailyActionEmailEnabled(),
     });
 
-    if (!lockAcquired) {
-      summary.skippedLocked += 1;
-      logSkip("daily", user.id, "daily_lock_exists");
+    if (!materializeResult.ok) {
+      summary.errors.push({
+        userId: user.id,
+        message: materializeResult.message,
+      });
       continue;
     }
 
-    try {
-      const selectedActions = await selectDailyEmailActions({
-        userId: user.id,
-        categories: user.preference.categories,
-        energyLevel: user.preference.energyLevel,
-        availableMinutes: user.preference.availableMinutes,
-      });
-
-      if (selectedActions.length === 0) {
-        summary.skippedNoActions += 1;
-        logSkip("daily", user.id, "no_actions_available");
-        continue;
+    if (materializeResult.result === "skipped") {
+      switch (materializeResult.reason) {
+        case "missing_preference":
+          logSkip("daily", user.id, "missing_preference");
+          break;
+        case "inactive_subscription":
+          break;
+        case "signup_day":
+          logSkip("daily", user.id, "signup_day");
+          break;
+        case "monthly_already_sent_today":
+          summary.skippedMonthly += 1;
+          logSkip("daily", user.id, "monthly_already_sent_today");
+          break;
+        case "daily_already_sent_today":
+          summary.skippedExisting += 1;
+          logSkip("daily", user.id, "daily_already_sent_today");
+          break;
+        case "daily_lock_exists":
+          summary.skippedLocked += 1;
+          logSkip("daily", user.id, "daily_lock_exists");
+          break;
+        case "no_actions_available":
+          summary.skippedNoActions += 1;
+          logSkip("daily", user.id, "no_actions_available");
+          break;
       }
+      continue;
+    }
 
-      const sentActions: Array<{ actionId: string }> = [];
-      const dateLabel = formatDailyDateLabel(now, timezone);
-
-      for (const selectedAction of selectedActions) {
-        try {
-          await sendDailyActionEmail({
-            userEmail: user.email,
-            categories: [selectedAction],
-            date: dateLabel,
-            trackingBaseUrl: baseUrl,
-            userId: user.id,
-            locale: user.preference.locale,
-          });
-          sentActions.push({ actionId: selectedAction.actionId });
-        } catch (error) {
-          summary.errors.push({
-            userId: user.id,
-            message:
-              error instanceof Error
-                ? `Failed action ${selectedAction.actionId}: ${error.message}`
-                : `Failed action ${selectedAction.actionId}: Unknown error.`,
-          });
-        }
-      }
-
-      if (sentActions.length === 0) {
-        continue;
-      }
-
-      await logDailySend({
-        userId: user.id,
-        localDate,
-        actions: sentActions,
-        sentAt: new Date(),
-      });
-
-      summary.sent += sentActions.length;
-    } catch (error) {
-      summary.errors.push({
-        userId: user.id,
-        message: error instanceof Error ? error.message : "Unknown error.",
-      });
+    summary.sent += materializeResult.actionCount;
+    for (const message of materializeResult.emailErrors) {
+      summary.errors.push({ userId: user.id, message });
     }
   }
 

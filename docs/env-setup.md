@@ -36,6 +36,12 @@ Rules:
 | `RESEND_WEBHOOK_SECRET` | No | Resend -> Webhooks -> endpoint secret. | Needed for the Resend webhook route. |
 | `EMAIL_REPLY_TO` | No | Use the inbox the team monitors for replies. | Current recommended value: `hello@onething.so`. |
 
+## Optional Variables
+
+| Variable | Public | Notes |
+| --- | --- | --- |
+| `DAILY_ACTION_EMAIL_ENABLED` | No | Set to `false` to stop sending morning action emails via Resend while still recording today’s actions when users open the dashboard (and when the cron runs in the morning window). Omit or set to any other value to keep emails on. When emails stay on, the dashboard only fills in today’s actions after the local morning send window (same 8:00–8:20 window as the cron) so the cron can send first. |
+
 ## Stripe Test to Live Cutover
 
 When switching Stripe from test mode to live mode, update all of the following:

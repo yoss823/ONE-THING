@@ -1,9 +1,21 @@
 import { DailyDeliveryStatus, DailyDeliveryType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  getLocalTimeSnapshot,
+  resolveTimezone,
+  SEND_WINDOW_MINUTES,
+  TARGET_SEND_HOUR,
+  TARGET_SEND_MINUTE,
+} from "@/lib/daily/local-calendar";
+import {
+  isDailyActionEmailEnabled,
+  materializeTodayDailyDelivery,
+} from "@/lib/daily/materialize-today-delivery";
 import { prisma } from "@/lib/db";
 import { getMonthlyProgressMessage } from "@/lib/i18n/account-monthly";
 import { normalizeSiteLocale } from "@/lib/i18n/locale";
+import { tryResolvePublicBaseUrl } from "@/lib/url/public-base-url";
 
 const PLAN_LABELS: Record<string, string> = {
   tier_1: "1 theme",
@@ -80,6 +92,23 @@ export async function GET(request: NextRequest) {
   const { start, end } = getMonthWindow(now);
   const timezone = user.timezone ?? "UTC";
   const localToday = getLocalDateValue(now, timezone);
+
+  const emailsOn = isDailyActionEmailEnabled();
+  const resolvedTz = resolveTimezone(timezone);
+  const localSnap = getLocalTimeSnapshot(now, resolvedTz);
+  const localMinutes = localSnap.hour * 60 + localSnap.minute;
+  const afterMorningEmailWindow =
+    localMinutes > TARGET_SEND_HOUR * 60 + TARGET_SEND_MINUTE + SEND_WINDOW_MINUTES;
+
+  if (!emailsOn || afterMorningEmailWindow) {
+    await materializeTodayDailyDelivery({
+      userId,
+      now,
+      baseUrl: tryResolvePublicBaseUrl() ?? undefined,
+      sendEmails: false,
+    });
+  }
+
   const [deliveryLogs, changesUsedThisMonth, recentActions, todayActions, recentCheckin] = await Promise.all([
     prisma.dailyDeliveryLog.findMany({
       where: {
