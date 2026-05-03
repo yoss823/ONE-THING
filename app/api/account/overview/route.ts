@@ -6,7 +6,10 @@ import {
   resolveTimezone,
   toLocalDateValue,
 } from "@/lib/daily/local-calendar";
-import { materializeTodayDailyDelivery } from "@/lib/daily/materialize-today-delivery";
+import {
+  materializeTodayDailyDelivery,
+  releaseDeliveryWindowLock,
+} from "@/lib/daily/materialize-today-delivery";
 import { prisma } from "@/lib/db";
 import { getMonthlyProgressMessage } from "@/lib/i18n/account-monthly";
 import { normalizeSiteLocale } from "@/lib/i18n/locale";
@@ -75,12 +78,40 @@ export async function GET(request: NextRequest) {
   const resolvedTz = resolveTimezone(user.timezone ?? "UTC");
   const localToday = toLocalDateValue(getLocalTimeSnapshot(now, resolvedTz));
 
-  const mat = await materializeTodayDailyDelivery({
+  let mat = await materializeTodayDailyDelivery({
     userId,
     now,
     baseUrl: tryResolvePublicBaseUrl() ?? undefined,
     sendEmails: false,
   });
+
+  if (
+    mat.ok &&
+    mat.result === "skipped" &&
+    mat.reason === "daily_lock_exists"
+  ) {
+    const logForDay = await prisma.dailyDeliveryLog.findFirst({
+      where: {
+        userId,
+        type: DailyDeliveryType.DAILY,
+        localDate: { equals: localToday },
+      },
+      select: { id: true },
+    });
+    if (!logForDay) {
+      await releaseDeliveryWindowLock({
+        userId,
+        type: DailyDeliveryType.DAILY,
+        localDate: localToday,
+      });
+      mat = await materializeTodayDailyDelivery({
+        userId,
+        now,
+        baseUrl: tryResolvePublicBaseUrl() ?? undefined,
+        sendEmails: false,
+      });
+    }
+  }
 
   // #region agent log
   fetch("http://127.0.0.1:7337/ingest/abbedae1-06a0-4f0b-94e1-d1a37731f5f9", {
@@ -170,10 +201,7 @@ export async function GET(request: NextRequest) {
       where: {
         userId,
         type: DailyDeliveryType.DAILY,
-        localDate: {
-          gte: localToday,
-          lt: new Date(localToday.getTime() + 24 * 60 * 60 * 1000),
-        },
+        localDate: { equals: localToday },
       },
       select: {
         status: true,
@@ -239,6 +267,21 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     ok: true,
+    ...(process.env.AGENT_OVERVIEW_DEBUG === "1"
+      ? {
+          deliveryDebug: {
+            resolvedTz,
+            localTodayUtcMs: localToday.getTime(),
+            matOk: mat.ok,
+            matResult: mat.ok ? mat.result : "error",
+            matReason: mat.ok && mat.result === "skipped" ? mat.reason : undefined,
+            matActionCount:
+              mat.ok && mat.result === "delivered" ? mat.actionCount : undefined,
+            matErr: !mat.ok ? mat.message : undefined,
+            todayActionsCount: todayActions.length,
+          },
+        }
+      : {}),
     timezone: user.timezone ?? "UTC",
     planLabel: PLAN_LABELS[user.subscription.plan] ?? user.subscription.plan,
     planThemeLimit: PLAN_THEME_LIMITS[user.subscription.plan] ?? 1,

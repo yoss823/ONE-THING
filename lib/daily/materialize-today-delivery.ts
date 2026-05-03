@@ -43,7 +43,8 @@ async function acquireDeliveryWindowLock(params: {
   }
 }
 
-async function releaseDeliveryWindowLock(params: {
+/** Exported for overview lock recovery when a prior run left a row in `delivery_window_locks` without logs. */
+export async function releaseDeliveryWindowLock(params: {
   userId: string;
   type: DailyDeliveryType;
   localDate: Date;
