@@ -124,6 +124,7 @@ function logSkip(
   kind: "daily" | "monthly_clarity",
   userId: string,
   reason: DailySkipReason | MonthlySkipReason,
+  meta?: Record<string, unknown>,
 ): void {
   console.info(
     JSON.stringify({
@@ -131,6 +132,7 @@ function logSkip(
       kind,
       userId,
       skipReason: reason,
+      ...meta,
     }),
   );
 }
@@ -252,7 +254,11 @@ export async function handleDailyEmailCron(
     const localSnapshot = getLocalTimeSnapshot(now, timezone);
 
     if (!isDueAtEightAm(localSnapshot)) {
-      logSkip("daily", user.id, "outside_send_window");
+      logSkip("daily", user.id, "outside_send_window", {
+        timezone,
+        localHour: localSnapshot.hour,
+        localMinute: localSnapshot.minute,
+      });
       continue;
     }
 

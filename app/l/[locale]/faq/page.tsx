@@ -44,7 +44,7 @@ export default async function FaqPage({ params }: Props) {
       </p>
       <div className="space-y-10">
         {items.map((item) => (
-          <section key={item.question} className="border-b border-[#e7e7e7] pb-8 last:border-0">
+          <section key={item.question} className="border-b border-[#e4e0d8] pb-8 last:border-0">
             <h2 className="font-[var(--font-display)] text-xl text-[#151515]">{item.question}</h2>
             <p className="mt-3 text-[#444]">{item.answer}</p>
           </section>

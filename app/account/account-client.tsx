@@ -598,7 +598,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
   ];
 
   return (
-    <main className="min-h-screen bg-white text-[#111] px-6 py-12">
+    <main className="min-h-screen bg-[#faf9f7] text-[#111] px-6 py-12 sm:px-10">
       <div className="max-w-xl mx-auto">
         <h1
           className="text-3xl md:text-4xl leading-tight"
@@ -632,19 +632,19 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
         ) : (
           <>
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="border border-[#e7e7e7] rounded-xl p-4 bg-white">
+              <div className="border border-[#e4e0d8] rounded-xl p-4 bg-white">
                 <p className="text-xs uppercase tracking-wide text-[#8b8b8b]">{ui.statPlan}</p>
                 <p className="mt-2 text-lg text-[#121212]">
                   {isLoadingOverview ? ui.loading : overview?.planLabel ?? ui.dash}
                 </p>
               </div>
-              <div className="border border-[#e7e7e7] rounded-xl p-4 bg-white">
+              <div className="border border-[#e4e0d8] rounded-xl p-4 bg-white">
                 <p className="text-xs uppercase tracking-wide text-[#8b8b8b]">{ui.statCompleted}</p>
                 <p className="mt-2 text-lg text-[#121212]">
                   {isLoadingOverview ? "…" : overview?.progress.completedCount ?? 0}
                 </p>
               </div>
-              <div className="border border-[#e7e7e7] rounded-xl p-4 bg-white">
+              <div className="border border-[#e4e0d8] rounded-xl p-4 bg-white">
                 <p className="text-xs uppercase tracking-wide text-[#8b8b8b]">
                   {ui.statCompletionRate}
                 </p>
@@ -661,7 +661,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
               </span>
             </p>
             <p className="mt-2 text-xs text-[#999] max-w-prose">{ui.subscriptionSingleNote}</p>
-            <div className="mt-4 rounded-xl border border-[#e7e7e7] bg-[#fafafa] px-4 py-3 text-left">
+            <div className="mt-4 rounded-xl border border-[#e4e0d8] bg-[#fafafa] px-4 py-3 text-left">
               <p className="text-xs uppercase tracking-wide text-[#8b8b8b]">{ui.deliveryTimezoneLabel}</p>
               <p className="mt-2 font-mono text-sm text-[#121212] break-all">
                 {isLoadingOverview ? "…" : overview?.timezone ?? "—"}
@@ -685,7 +685,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
               <p className="mt-3 text-xs text-[#777] leading-relaxed">{ui.deliveryTimezoneHelp}</p>
             </div>
             {(overview?.planThemeLimit ?? 1) < 3 ? (
-              <div className="mt-4 rounded-xl border border-[#e7e7e7] bg-white p-4">
+              <div className="mt-4 rounded-xl border border-[#e4e0d8] bg-white p-4">
                 <p className="text-sm text-[#222]">{ui.needMoreThemes}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {(overview?.planThemeLimit ?? 1) < 2 ? (
@@ -712,7 +712,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
               </div>
             ) : null}
 
-            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+            <div className="mt-8 border border-[#e4e0d8] rounded-xl p-4 bg-white">
               <p className="text-sm text-[#222]">{ui.todayObjective}</p>
               <div className="mt-3 space-y-2">
                 {overview?.todayObjective.length ? (
@@ -733,12 +733,12 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
               </div>
             </div>
 
-            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+            <div className="mt-8 border border-[#e4e0d8] rounded-xl p-4 bg-white">
               <p className="text-sm text-[#222]">{ui.monthlyRecap}</p>
               <p className="mt-2 text-sm text-[#444]">{overview?.monthlyMessage ?? ui.keepGoing}</p>
             </div>
 
-            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+            <div className="mt-8 border border-[#e4e0d8] rounded-xl p-4 bg-white">
               <p className="text-sm text-[#222]">{ui.difficultyTime}</p>
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -810,7 +810,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
               </button>
             </div>
 
-            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+            <div className="mt-8 border border-[#e4e0d8] rounded-xl p-4 bg-white">
               <p className="text-sm text-[#222]">{ui.coachCheckin}</p>
               <p className="mt-2 text-xs text-[#777]">{ui.howFeelToday}</p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -851,7 +851,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
               ) : null}
             </div>
 
-            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+            <div className="mt-8 border border-[#e4e0d8] rounded-xl p-4 bg-white">
               <p className="text-sm text-[#222]">{ui.recentActions}</p>
               <div className="mt-4 space-y-2">
                 {overview?.recentActions.length ? (
@@ -876,7 +876,7 @@ export function AccountClient({ siteLocale }: { siteLocale: SiteLocale }) {
               </div>
             </div>
 
-            <div className="mt-8 border border-[#e7e7e7] rounded-xl p-4 bg-white">
+            <div className="mt-8 border border-[#e4e0d8] rounded-xl p-4 bg-white">
               <p className="text-sm text-[#222]">{ui.changeThemesQuestion}</p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button

@@ -1,6 +1,7 @@
 export const TARGET_SEND_HOUR = 8;
 export const TARGET_SEND_MINUTE = 0;
-export const SEND_WINDOW_MINUTES = 20;
+/** Inclusive minutes after 8:00 local — widened so 10‑minute crons rarely miss the whole window. */
+export const SEND_WINDOW_MINUTES = 59;
 
 export type LocalTimeSnapshot = {
   year: number;

@@ -77,6 +77,8 @@ export async function GET(request: NextRequest) {
   const { start, end } = getMonthWindow(now);
   const resolvedTz = resolveTimezone(user.timezone ?? "UTC");
   const localToday = toLocalDateValue(getLocalTimeSnapshot(now, resolvedTz));
+  const localExclusiveEnd = new Date(localToday);
+  localExclusiveEnd.setUTCDate(localExclusiveEnd.getUTCDate() + 1);
 
   let mat = await materializeTodayDailyDelivery({
     userId,
@@ -94,7 +96,10 @@ export async function GET(request: NextRequest) {
       where: {
         userId,
         type: DailyDeliveryType.DAILY,
-        localDate: { equals: localToday },
+        localDate: {
+          gte: localToday,
+          lt: localExclusiveEnd,
+        },
       },
       select: { id: true },
     });
@@ -112,47 +117,6 @@ export async function GET(request: NextRequest) {
       });
     }
   }
-
-  // #region agent log
-  fetch("http://127.0.0.1:7337/ingest/abbedae1-06a0-4f0b-94e1-d1a37731f5f9", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "8064b8",
-    },
-    body: JSON.stringify({
-      sessionId: "8064b8",
-      hypothesisId: "H-overview",
-      location: "app/api/account/overview/route.ts:GET",
-      message: "overview_materialize",
-      data: {
-        resolvedTz,
-        localTodayUtcMs: localToday.getTime(),
-        matOk: mat.ok,
-        matResult: mat.ok ? mat.result : "error",
-        matReason: mat.ok && mat.result === "skipped" ? mat.reason : undefined,
-        matActionCount: mat.ok && mat.result === "delivered" ? mat.actionCount : undefined,
-        matErr: !mat.ok ? mat.message : undefined,
-        subscriptionStatus: user.subscription.status,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  console.info(
-    JSON.stringify({
-      event: "agent_overview_debug",
-      hypothesisId: "H-overview",
-      resolvedTz,
-      localTodayUtcMs: localToday.getTime(),
-      matOk: mat.ok,
-      matResult: mat.ok ? mat.result : "error",
-      matReason: mat.ok && mat.result === "skipped" ? mat.reason : undefined,
-      matActionCount: mat.ok && mat.result === "delivered" ? mat.actionCount : undefined,
-      matErr: !mat.ok ? mat.message : undefined,
-      subscriptionStatus: user.subscription.status,
-    }),
-  );
-  // #endregion
 
   const [deliveryLogs, changesUsedThisMonth, recentActions, todayActions, recentCheckin] = await Promise.all([
     prisma.dailyDeliveryLog.findMany({
@@ -201,7 +165,10 @@ export async function GET(request: NextRequest) {
       where: {
         userId,
         type: DailyDeliveryType.DAILY,
-        localDate: { equals: localToday },
+        localDate: {
+          gte: localToday,
+          lt: localExclusiveEnd,
+        },
       },
       select: {
         status: true,
@@ -227,31 +194,6 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
-  // #region agent log
-  fetch("http://127.0.0.1:7337/ingest/abbedae1-06a0-4f0b-94e1-d1a37731f5f9", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "8064b8",
-    },
-    body: JSON.stringify({
-      sessionId: "8064b8",
-      hypothesisId: "H-query",
-      location: "app/api/account/overview/route.ts:afterQuery",
-      message: "overview_today_actions_count",
-      data: { todayActionsCount: todayActions.length },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  console.info(
-    JSON.stringify({
-      event: "agent_overview_debug",
-      hypothesisId: "H-query",
-      todayActionsCount: todayActions.length,
-    }),
-  );
-  // #endregion
-
   const completedCount = deliveryLogs.filter(
     (log) => log.status === DailyDeliveryStatus.COMPLETED,
   ).length;
@@ -264,6 +206,21 @@ export async function GET(request: NextRequest) {
 
   const preferenceLocale = normalizeSiteLocale(user.preference.locale ?? "en");
   const monthlyMessage = getMonthlyProgressMessage(preferenceLocale, completionRate);
+
+  console.info(
+    JSON.stringify({
+      event: "overview_delivery",
+      resolvedTz,
+      localTodayUtcMs: localToday.getTime(),
+      matOk: mat.ok,
+      matResult: mat.ok ? mat.result : "error",
+      matReason: mat.ok && mat.result === "skipped" ? mat.reason : undefined,
+      matActionCount: mat.ok && mat.result === "delivered" ? mat.actionCount : undefined,
+      matErr: !mat.ok ? mat.message : undefined,
+      subscriptionStatus: user.subscription.status,
+      todayActionsCount: todayActions.length,
+    }),
+  );
 
   return NextResponse.json({
     ok: true,

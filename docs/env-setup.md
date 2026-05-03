@@ -40,7 +40,7 @@ Rules:
 
 | Variable | Public | Notes |
 | --- | --- | --- |
-| `DAILY_ACTION_EMAIL_ENABLED` | No | Set to `false` to stop sending morning action emails via Resend while still recording today’s actions when users open the dashboard (and when the cron runs in the morning window). Omit or set to any other value to keep emails on. When emails stay on, the dashboard only fills in today’s actions after the local morning send window (same 8:00–8:20 window as the cron) so the cron can send first. |
+| `DAILY_ACTION_EMAIL_ENABLED` | No | Set to `false` to stop sending morning action emails via Resend while still recording today’s actions when users open the dashboard (and when the cron runs in the morning window). Omit or set to any other value to keep emails on. When emails stay on, the cron sends during the local morning window (8:00–8:59). The dashboard materializes today’s rows whenever the account overview loads. |
 
 ## Stripe Test to Live Cutover
 

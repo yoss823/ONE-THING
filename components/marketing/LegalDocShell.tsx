@@ -15,11 +15,11 @@ export function LegalDocShell({ locale, title, children }: Props) {
   const home = getHomePageCopy(locale);
 
   return (
-    <main className="min-h-screen bg-[#fafafa] text-[#121212]">
-      <div className="mx-auto max-w-3xl px-6 py-14">
+    <main className="min-h-screen bg-[#faf9f7] text-[#121212]">
+      <div className="mx-auto max-w-3xl px-6 py-14 sm:px-10">
         <Link
           href={`/l/${locale}`}
-          className="text-sm font-medium text-[#555] underline underline-offset-4 hover:text-[#111]"
+          className="text-sm font-medium text-[#5a5a5a] underline underline-offset-4 hover:text-[#0a0a0a]"
         >
           ← {home.footerBackHome}
         </Link>
@@ -29,7 +29,9 @@ export function LegalDocShell({ locale, title, children }: Props) {
         >
           {title}
         </h1>
-        <div className="mt-10 space-y-10 text-[15px] leading-relaxed text-[#333]">{children}</div>
+        <div className="mt-10 space-y-10 rounded-2xl border border-[#e4e0d8] bg-white px-6 py-8 text-[15px] leading-relaxed text-[#333] shadow-sm sm:px-8">
+          {children}
+        </div>
         <SupportingPageNav locale={locale} />
       </div>
     </main>

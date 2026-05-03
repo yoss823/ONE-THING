@@ -15,7 +15,7 @@ const ITEMS: Record<SiteLocale, FaqItem[]> = {
     {
       question: "At what time are emails sent?",
       answer:
-        "Between 8:00 and 8:20 AM in the timezone saved on your account. On the 1st of each month, only the monthly recap is sent instead of the daily action.",
+        "Between 8:00 and 8:59 AM in the timezone saved on your account. On the 1st of each month, only the monthly recap is sent instead of the daily action.",
     },
     {
       question: "How do I change language or timezone?",
@@ -47,7 +47,7 @@ const ITEMS: Record<SiteLocale, FaqItem[]> = {
     {
       question: "À quelle heure partent les e-mails ?",
       answer:
-        "Entre 8h00 et 8h20 dans le fuseau horaire enregistré sur votre compte. Le 1er du mois, seul le bilan mensuel est envoyé à la place de l’action du jour.",
+        "Entre 8h00 et 8h59 dans le fuseau horaire enregistré sur votre compte. Le 1er du mois, seul le bilan mensuel est envoyé à la place de l’action du jour.",
     },
     {
       question: "Comment changer la langue ou le fuseau ?",
@@ -79,7 +79,7 @@ const ITEMS: Record<SiteLocale, FaqItem[]> = {
     {
       question: "¿A qué hora se envían los correos?",
       answer:
-        "Entre las 8:00 y las 8:20 en la zona horaria guardada en tu cuenta. El día 1 de cada mes solo se envía el resumen mensual en lugar de la acción diaria.",
+        "Entre las 8:00 y las 8:59 en la zona horaria guardada en tu cuenta. El día 1 de cada mes solo se envía el resumen mensual en lugar de la acción diaria.",
     },
     {
       question: "¿Cómo cambio el idioma o la zona horaria?",
