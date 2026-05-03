@@ -1,0 +1,8 @@
+Split éditorial (test 2026-04-30) — revenir à l’ancienne page d’accueil
+
+1. Copier ce dossier vers le composant actuel :
+   design-backups/pre-split-editorial-2026-04-30/HomePage.tsx
+   → components/marketing/HomePage.tsx (remplacer le fichier entier)
+
+2. Optionnel : si globals.css avait été modifié pour ce test, restaurer depuis git :
+   git checkout -- app/globals.css
