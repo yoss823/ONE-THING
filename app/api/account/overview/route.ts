@@ -107,6 +107,20 @@ export async function GET(request: NextRequest) {
       timestamp: Date.now(),
     }),
   }).catch(() => {});
+  console.info(
+    JSON.stringify({
+      event: "agent_overview_debug",
+      hypothesisId: "H-overview",
+      resolvedTz,
+      localTodayUtcMs: localToday.getTime(),
+      matOk: mat.ok,
+      matResult: mat.ok ? mat.result : "error",
+      matReason: mat.ok && mat.result === "skipped" ? mat.reason : undefined,
+      matActionCount: mat.ok && mat.result === "delivered" ? mat.actionCount : undefined,
+      matErr: !mat.ok ? mat.message : undefined,
+      subscriptionStatus: user.subscription.status,
+    }),
+  );
   // #endregion
 
   const [deliveryLogs, changesUsedThisMonth, recentActions, todayActions, recentCheckin] = await Promise.all([
@@ -201,6 +215,13 @@ export async function GET(request: NextRequest) {
       timestamp: Date.now(),
     }),
   }).catch(() => {});
+  console.info(
+    JSON.stringify({
+      event: "agent_overview_debug",
+      hypothesisId: "H-query",
+      todayActionsCount: todayActions.length,
+    }),
+  );
   // #endregion
 
   const completedCount = deliveryLogs.filter(
