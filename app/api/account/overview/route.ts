@@ -4,14 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getLocalTimeSnapshot,
   resolveTimezone,
-  SEND_WINDOW_MINUTES,
-  TARGET_SEND_HOUR,
-  TARGET_SEND_MINUTE,
+  toLocalDateValue,
 } from "@/lib/daily/local-calendar";
-import {
-  isDailyActionEmailEnabled,
-  materializeTodayDailyDelivery,
-} from "@/lib/daily/materialize-today-delivery";
+import { materializeTodayDailyDelivery } from "@/lib/daily/materialize-today-delivery";
 import { prisma } from "@/lib/db";
 import { getMonthlyProgressMessage } from "@/lib/i18n/account-monthly";
 import { normalizeSiteLocale } from "@/lib/i18n/locale";
@@ -41,19 +36,6 @@ function getMonthWindow(now: Date): { start: Date; end: Date } {
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   return { start, end };
-}
-
-function getLocalDateValue(date: Date, timezone: string): Date {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const year = Number(parts.find((part) => part.type === "year")?.value);
-  const month = Number(parts.find((part) => part.type === "month")?.value);
-  const day = Number(parts.find((part) => part.type === "day")?.value);
-  return new Date(Date.UTC(year, month - 1, day));
 }
 
 export async function GET(request: NextRequest) {
@@ -90,24 +72,42 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
   const { start, end } = getMonthWindow(now);
-  const timezone = user.timezone ?? "UTC";
-  const localToday = getLocalDateValue(now, timezone);
+  const resolvedTz = resolveTimezone(user.timezone ?? "UTC");
+  const localToday = toLocalDateValue(getLocalTimeSnapshot(now, resolvedTz));
 
-  const emailsOn = isDailyActionEmailEnabled();
-  const resolvedTz = resolveTimezone(timezone);
-  const localSnap = getLocalTimeSnapshot(now, resolvedTz);
-  const localMinutes = localSnap.hour * 60 + localSnap.minute;
-  const afterMorningEmailWindow =
-    localMinutes > TARGET_SEND_HOUR * 60 + TARGET_SEND_MINUTE + SEND_WINDOW_MINUTES;
+  const mat = await materializeTodayDailyDelivery({
+    userId,
+    now,
+    baseUrl: tryResolvePublicBaseUrl() ?? undefined,
+    sendEmails: false,
+  });
 
-  if (!emailsOn || afterMorningEmailWindow) {
-    await materializeTodayDailyDelivery({
-      userId,
-      now,
-      baseUrl: tryResolvePublicBaseUrl() ?? undefined,
-      sendEmails: false,
-    });
-  }
+  // #region agent log
+  fetch("http://127.0.0.1:7337/ingest/abbedae1-06a0-4f0b-94e1-d1a37731f5f9", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "8064b8",
+    },
+    body: JSON.stringify({
+      sessionId: "8064b8",
+      hypothesisId: "H-overview",
+      location: "app/api/account/overview/route.ts:GET",
+      message: "overview_materialize",
+      data: {
+        resolvedTz,
+        localTodayUtcMs: localToday.getTime(),
+        matOk: mat.ok,
+        matResult: mat.ok ? mat.result : "error",
+        matReason: mat.ok && mat.result === "skipped" ? mat.reason : undefined,
+        matActionCount: mat.ok && mat.result === "delivered" ? mat.actionCount : undefined,
+        matErr: !mat.ok ? mat.message : undefined,
+        subscriptionStatus: user.subscription.status,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   const [deliveryLogs, changesUsedThisMonth, recentActions, todayActions, recentCheckin] = await Promise.all([
     prisma.dailyDeliveryLog.findMany({
@@ -184,6 +184,24 @@ export async function GET(request: NextRequest) {
       },
     }),
   ]);
+
+  // #region agent log
+  fetch("http://127.0.0.1:7337/ingest/abbedae1-06a0-4f0b-94e1-d1a37731f5f9", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "8064b8",
+    },
+    body: JSON.stringify({
+      sessionId: "8064b8",
+      hypothesisId: "H-query",
+      location: "app/api/account/overview/route.ts:afterQuery",
+      message: "overview_today_actions_count",
+      data: { todayActionsCount: todayActions.length },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   const completedCount = deliveryLogs.filter(
     (log) => log.status === DailyDeliveryStatus.COMPLETED,
