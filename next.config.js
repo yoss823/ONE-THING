@@ -4,6 +4,11 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  async rewrites() {
+    return [
+      { source: "/favicon.ico", destination: "/icon" },
+    ];
+  },
 };
 
 module.exports = nextConfig;
