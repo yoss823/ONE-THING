@@ -273,6 +273,12 @@ export async function materializeTodayDailyDelivery(params: {
       }
     }
 
+    if (sentActions.length === 0 && selectedActions.length > 0) {
+      for (const selectedAction of selectedActions) {
+        sentActions.push({ actionId: selectedAction.actionId });
+      }
+    }
+
     if (sentActions.length === 0) {
       await releaseDeliveryWindowLock({
         userId: user.id,

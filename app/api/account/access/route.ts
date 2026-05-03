@@ -37,7 +37,10 @@ export async function POST(request: Request) {
     },
   });
 
-  if (!user || user.subscription?.status !== "active") {
+  const status = user?.subscription?.status?.toLowerCase() ?? "";
+  const canAccess = ["active", "trialing", "past_due"].includes(status);
+
+  if (!user || !canAccess) {
     return NextResponse.json(
       { error: "No active account found for this email." },
       { status: 404 },

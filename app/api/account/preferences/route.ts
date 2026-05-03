@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 
-  if (user.subscription.status !== "active") {
+  if (!["active", "trialing", "past_due"].includes(user.subscription.status.toLowerCase())) {
     return NextResponse.json({ error: "Subscription is not active." }, { status: 403 });
   }
 

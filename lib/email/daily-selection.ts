@@ -113,6 +113,24 @@ export async function selectDailyEmailActions({
   energyLevel,
   availableMinutes,
 }: SelectionParams): Promise<SelectedDailyEmailAction[]> {
+  if (!categories || categories.length === 0) {
+    const anyActive = await prisma.action.findFirst({
+      where: { active: true },
+      select: { id: true, text: true, category: true },
+      orderBy: { id: "asc" },
+    });
+    if (!anyActive) {
+      return [];
+    }
+    return [
+      {
+        name: formatCategoryLabel(anyActive.category),
+        action: anyActive.text,
+        actionId: anyActive.id,
+      },
+    ];
+  }
+
   const [recentLogs, actions] = await Promise.all([
     prisma.dailyDeliveryLog.findMany({
       where: {
@@ -156,7 +174,7 @@ export async function selectDailyEmailActions({
 
   const defaultComplexity = getDefaultComplexity(energyLevel);
 
-  return categories.flatMap((category) => {
+  const picked = categories.flatMap((category) => {
     const categoryLogs = recentLogs.filter(
       (log) => log.action?.category === category,
     );
@@ -193,4 +211,41 @@ export async function selectDailyEmailActions({
       actionId: selected.id,
     }];
   });
+
+  if (picked.length > 0) {
+    return picked;
+  }
+
+  if (actions.length > 0) {
+    const first = actions[0];
+    return [
+      {
+        name: formatCategoryLabel(first.category),
+        action: first.text,
+        actionId: first.id,
+      },
+    ];
+  }
+
+  const anyActive = await prisma.action.findFirst({
+    where: { active: true },
+    select: {
+      id: true,
+      text: true,
+      category: true,
+    },
+    orderBy: { id: "asc" },
+  });
+
+  if (!anyActive) {
+    return [];
+  }
+
+  return [
+    {
+      name: formatCategoryLabel(anyActive.category),
+      action: anyActive.text,
+      actionId: anyActive.id,
+    },
+  ];
 }
