@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { writeLangCommittedCookie } from "@/lib/browser/lang-commitment";
@@ -27,15 +27,6 @@ function readOnboardingAnswers(): OnboardingAnswers | null {
   }
 }
 
-const noopSubscribe = () => () => {};
-
-function onboardingAnswersSnapshot(): OnboardingAnswers | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  return readOnboardingAnswers();
-}
-
 export function WelcomeClient({
   locale,
   hasCheckoutSession,
@@ -44,7 +35,11 @@ export function WelcomeClient({
   hasCheckoutSession: boolean;
 }) {
   const copy = useMemo(() => getWelcomeScreenCopy(locale), [locale]);
-  const onboarding = useSyncExternalStore(noopSubscribe, onboardingAnswersSnapshot, () => null);
+  const [onboarding, setOnboarding] = useState<OnboardingAnswers | null>(null);
+
+  useEffect(() => {
+    setOnboarding(readOnboardingAnswers());
+  }, []);
 
   useEffect(() => {
     writeSiteLocaleCookie(locale);
@@ -78,7 +73,10 @@ export function WelcomeClient({
             {onboarding.energy ? (
               <p className="mt-1">
                 {copy.energyPrefix}{" "}
-                {copy.energyLabels[onboarding.energy.toLowerCase()] ?? onboarding.energy}
+                {
+                  copy.energyLabels[String(onboarding.energy).toLowerCase()] ??
+                  String(onboarding.energy)
+                }
               </p>
             ) : null}
             {onboarding.time != null && onboarding.time !== "" ? (
