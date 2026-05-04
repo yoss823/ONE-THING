@@ -26,11 +26,15 @@ export async function sendDailyActionEmail(
   const subject = `${copy.subjectPrefix} ${params.date}`;
   const resend = getResendClient();
 
-  await resend.emails.send({
+  const result = await resend.emails.send({
     from: getEmailFrom(),
     to: params.userEmail,
     subject,
     html: generateDailyActionHtml(params),
     text: generateDailyActionText(params),
   });
+
+  if (result.error) {
+    throw new Error(result.error.message ?? "Resend rejected the daily action email.");
+  }
 }

@@ -25,7 +25,7 @@ export async function sendMonthlyClarityEmail(
   const replyTo = process.env.EMAIL_REPLY_TO?.trim() || undefined;
   const resend = getResendClient();
 
-  await resend.emails.send({
+  const result = await resend.emails.send({
     from: getEmailFrom(),
     to: params.userEmail,
     subject,
@@ -33,4 +33,8 @@ export async function sendMonthlyClarityEmail(
     text: generateMonthlyClarityText(params),
     replyTo,
   });
+
+  if (result.error) {
+    throw new Error(result.error.message ?? "Resend rejected the monthly clarity email.");
+  }
 }
